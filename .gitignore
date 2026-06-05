@@ -16,3 +16,33 @@ bin-release/
 # Project files, i.e. `.project`, `.actionScriptProperties` and `.flexProperties`
 # should NOT be excluded as they contain compiler settings and other important
 # information for Eclipse / Flash Builder.
+
+# ---------------------------------------------------------------------------
+# iKali runtime & sensitive artifacts (never commit these)
+# ---------------------------------------------------------------------------
+# Per-user state, logs, authorization flag, cloned tool sources
+.ikali/
+*.log
+
+# Scan results / reports
+reports/
+*.pcap
+*.cap
+*.xml
+
+# Downloaded wordlists (large; fetch via wordlists/get_wordlists.sh)
+wordlists/rockyou.txt
+wordlists/rockyou.txt.gz
+wordlists/seclists/
+wordlists/SecLists/
+
+# Local-only / secret configuration overrides
+configs/**/.local
+*.local
+.env
+
+# Credentials and keys — defense in depth
+*.pem
+*.key
+id_rsa*
+*.kdbx

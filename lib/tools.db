@@ -1,0 +1,177 @@
+# iKali tool registry — single source of truth.
+# Format (pipe-separated):  name|category|method|package_or_binary|ish_ok|description
+#   name        display name
+#   category    network|web|password|osint|traffic|exploit|wireless|reverse|forensics|ssl|mobile|c2|reporting|utils|base
+#   method      apk|pip|go|gem|git|source|special
+#   package     install token / resolved binary used for status checks
+#   ish_ok      yes|no|partial   (works under iSH?)
+#   description short one-liner
+#
+# Lines beginning with # and blank lines are ignored.
+
+# --- base ---
+curl|base|apk|curl|yes|Transfer data from URLs
+wget|base|apk|wget|yes|Network downloader
+git|base|apk|git|yes|Version control / clone tools
+python3|base|apk|python3|yes|Python 3 interpreter
+py3-pip|base|apk|pip3|yes|Python package installer
+ruby|base|apk|ruby|yes|Ruby interpreter
+go|base|apk|go|partial|Go toolchain (slow under emulation)
+perl|base|apk|perl|yes|Perl interpreter
+tmux|base|apk|tmux|yes|Terminal multiplexer
+vim|base|apk|vim|yes|Text editor
+jq|base|apk|jq|yes|JSON processor
+tar|base|apk|tar|yes|Archive utility
+unzip|base|apk|unzip|yes|Zip extractor
+build-base|base|apk|gcc|partial|Compiler toolchain for source builds
+
+# --- network ---
+nmap|network|apk|nmap|partial|Network/port scanner (use -sT on iSH)
+nmap-scripts|network|apk|nmap|yes|Nmap NSE script library
+masscan|network|apk|masscan|no|Mass IP port scanner (needs raw sockets)
+netcat|network|apk|nc|yes|TCP/IP swiss-army knife
+socat|network|apk|socat|yes|Multipurpose relay
+hping3|network|apk|hping3|no|Packet crafter (needs raw sockets)
+mtr|network|apk|mtr|partial|Traceroute + ping combined
+arp-scan|network|apk|arp-scan|no|ARP host discovery (raw sockets)
+netdiscover|network|source|netdiscover|no|Active/passive ARP recon
+fping|network|apk|fping|partial|Fast multi-host ping
+nbtscan|network|apk|nbtscan|yes|NetBIOS name scanner
+onesixtyone|network|source|onesixtyone|yes|SNMP community scanner
+snmp|network|apk|snmpwalk|yes|Net-SNMP tools (snmpwalk)
+p0f|network|apk|p0f|partial|Passive OS fingerprinting
+zmap|network|source|zmap|no|Internet-wide scanner (raw sockets)
+tcptraceroute|network|apk|tcptraceroute|partial|TCP-based traceroute
+
+# --- web ---
+nikto|web|apk|nikto|yes|Web server vulnerability scanner
+sqlmap|web|pip|sqlmap|yes|Automatic SQL injection tool
+dirb|web|apk|dirb|yes|Web content brute-forcer
+gobuster|web|go|gobuster|partial|Directory/DNS/vhost brute-forcer
+feroxbuster|web|apk|feroxbuster|partial|Recursive content discovery
+wfuzz|web|pip|wfuzz|yes|Web application fuzzer
+ffuf|web|go|ffuf|partial|Fast web fuzzer
+httpie|web|apk|http|yes|Human-friendly HTTP client
+whatweb|web|gem|whatweb|yes|Web technology fingerprinter
+wafw00f|web|pip|wafw00f|yes|Web application firewall detector
+wpscan|web|gem|wpscan|yes|WordPress security scanner
+joomscan|web|git|joomscan|yes|Joomla vulnerability scanner
+nuclei|web|go|nuclei|partial|Template-based vulnerability scanner
+xsser|web|pip|xsser|yes|Cross-site scripting detection
+commix|web|git|commix|yes|Command injection exploiter
+dalfox|web|go|dalfox|partial|XSS scanner and parameter analyzer
+
+# --- password ---
+hydra|password|apk|hydra|yes|Network login brute-forcer
+medusa|password|apk|medusa|yes|Parallel login brute-forcer
+john|password|apk|john|yes|John the Ripper password cracker
+hashcat|password|apk|hashcat|partial|GPU/CPU hash cracker (slow on iSH)
+crunch|password|apk|crunch|yes|Wordlist generator
+cewl|password|gem|cewl|yes|Custom wordlist spider
+cupp|password|git|cupp|yes|Common user password profiler
+patator|password|pip|patator|yes|Multi-purpose brute-forcer
+ncrack|password|apk|ncrack|partial|High-speed network auth cracker
+hash-identifier|password|pip|hashid|yes|Identify hash types
+
+# --- osint / dns ---
+bind-tools|osint|apk|dig|yes|DNS lookup utilities (dig/host)
+whois|osint|apk|whois|yes|Domain registration lookup
+dnsenum|osint|git|dnsenum|yes|DNS enumeration
+dnsrecon|osint|pip|dnsrecon|yes|DNS reconnaissance
+fierce|osint|pip|fierce|yes|DNS subdomain scanner
+sublist3r|osint|pip|sublist3r|yes|Subdomain enumeration via OSINT
+amass|osint|go|amass|partial|In-depth attack surface mapping
+subfinder|osint|go|subfinder|partial|Passive subdomain discovery
+theharvester|osint|pip|theHarvester|yes|Email/subdomain/host harvester
+recon-ng|osint|pip|recon-ng|yes|Web reconnaissance framework
+sherlock|osint|git|sherlock|yes|Hunt usernames across social networks
+spiderfoot|osint|pip|sf|yes|OSINT automation framework
+metagoofil|osint|git|metagoofil|yes|Document metadata harvester
+
+# --- traffic ---
+tshark|traffic|apk|tshark|partial|Wireshark CLI capture/analyzer
+wireshark|traffic|apk|wireshark|partial|Network protocol analyzer
+tcpdump|traffic|apk|tcpdump|partial|Command-line packet capture
+ettercap|traffic|apk|ettercap|no|MITM/sniffing suite (raw sockets)
+bettercap|traffic|apk|bettercap|no|Network attack/monitoring (raw sockets)
+mitmproxy|traffic|pip|mitmproxy|yes|Interactive HTTPS proxy
+dsniff|traffic|apk|dsniff|no|Password sniffing tools
+ngrep|traffic|apk|ngrep|partial|Network packet grep
+tcpflow|traffic|apk|tcpflow|partial|TCP stream reassembly
+driftnet|traffic|source|driftnet|no|Image sniffer (raw sockets)
+
+# --- exploit ---
+metasploit|exploit|special|msfconsole|partial|Exploitation framework (UTM recommended)
+exploitdb|exploit|git|searchsploit|yes|Exploit-DB archive + searchsploit
+impacket|exploit|pip|impacket-smbserver|yes|Network protocol toolkit
+crackmapexec|exploit|pip|crackmapexec|yes|Swiss-army knife for AD/networks
+responder|exploit|git|responder|partial|LLMNR/NBT-NS/MDNS poisoner
+evil-winrm|exploit|gem|evil-winrm|yes|WinRM shell for pentesting
+powersploit|exploit|git|powersploit|yes|PowerShell post-exploitation (scripts)
+
+# --- wireless ---
+aircrack-ng|wireless|apk|aircrack-ng|no|WiFi security auditing suite
+reaver|wireless|source|reaver|no|WPS PIN brute-force
+pixiewps|wireless|source|pixiewps|no|Offline WPS pixie-dust attack
+wifite|wireless|git|wifite|no|Automated wireless auditor
+kismet|wireless|apk|kismet|no|Wireless network detector/sniffer
+hostapd|wireless|apk|hostapd|no|Access point daemon
+dnsmasq|wireless|apk|dnsmasq|partial|DNS/DHCP for rogue AP
+mdk4|wireless|source|mdk4|no|WiFi testing/DoS toolkit
+
+# --- reverse ---
+radare2|reverse|apk|r2|yes|Reverse engineering framework
+gdb|reverse|apk|gdb|yes|GNU debugger
+binwalk|reverse|apk|binwalk|yes|Firmware analysis tool
+binutils|reverse|apk|strings|yes|strings/objdump/nm utilities
+ltrace|reverse|apk|ltrace|partial|Library call tracer
+strace|reverse|apk|strace|partial|System call tracer
+upx|reverse|apk|upx|yes|Executable packer/unpacker
+
+# --- forensics ---
+foremost|forensics|apk|foremost|yes|File carving/recovery
+volatility3|forensics|pip|vol|yes|Memory forensics framework
+exiftool|forensics|apk|exiftool|yes|Metadata reader/writer
+steghide|forensics|apk|steghide|yes|Steganography hide/extract
+stegseek|forensics|source|stegseek|yes|Fast steghide cracker
+foremost-scalpel|forensics|apk|scalpel|yes|File carving by headers
+
+# --- ssl / crypto ---
+openssl|ssl|apk|openssl|yes|TLS/crypto toolkit
+sslscan|ssl|apk|sslscan|yes|TLS cipher/config scanner
+sslyze|ssl|pip|sslyze|yes|Fast TLS configuration analyzer
+testssl|ssl|git|testssl.sh|yes|TLS/SSL server tester
+hashid|ssl|pip|hashid|yes|Hash type identifier
+fcrackzip|ssl|apk|fcrackzip|yes|Zip password cracker
+gnupg|ssl|apk|gpg|yes|GnuPG encryption/signing
+john-zip2john|ssl|apk|zip2john|yes|Extract zip hashes for John
+
+# --- mobile ---
+apktool|mobile|special|apktool|partial|APK reverse engineering (needs Java)
+jadx|mobile|special|jadx|partial|DEX to Java decompiler (needs Java)
+frida-tools|mobile|pip|frida|partial|Dynamic instrumentation toolkit
+objection|mobile|pip|objection|partial|Runtime mobile exploration
+android-tools|mobile|apk|adb|partial|ADB / fastboot
+
+# --- c2 / payload ---
+beef-xss|c2|special|beef|no|Browser exploitation framework (UTM)
+msfvenom|c2|special|msfvenom|partial|Payload generator (with metasploit)
+chisel|c2|go|chisel|partial|TCP/UDP tunnel over HTTP
+socat-relay|c2|apk|socat|yes|Relay/port-forward for pivoting
+ligolo|c2|go|ligolo-ng|partial|Reverse tunneling pivot
+
+# --- reporting ---
+pipal|reporting|git|pipal|yes|Password analysis reporting
+cutycapt|reporting|apk|cutycapt|no|Web page to image (needs X)
+wkhtmltopdf|reporting|apk|wkhtmltopdf|partial|HTML to PDF renderer
+aha|reporting|apk|aha|yes|ANSI terminal output to HTML
+
+# --- utils ---
+proxychains-ng|utils|apk|proxychains|yes|Force connections through proxies
+tor|utils|apk|tor|yes|Anonymity network client
+screen|utils|apk|screen|yes|Terminal session manager
+openssh|utils|apk|ssh|yes|SSH client/server
+rsync|utils|apk|rsync|yes|File synchronization
+nano|utils|apk|nano|yes|Simple text editor
+htop|utils|apk|htop|yes|Interactive process viewer
+ncat|utils|apk|ncat|yes|Nmap's netcat with TLS
