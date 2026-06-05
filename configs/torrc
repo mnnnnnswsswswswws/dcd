@@ -1,0 +1,25 @@
+# iKali minimal torrc — local SOCKS proxy for anonymized testing traffic.
+# Start with:  tor -f configs/torrc
+# Then route tools via proxychains (see configs/proxychains.conf).
+
+# SOCKS5 proxy for applications / proxychains.
+SocksPort 127.0.0.1:9050
+
+# DNS over Tor to prevent leaks.
+DNSPort 127.0.0.1:5353
+AutomapHostsOnResolve 1
+VirtualAddrNetworkIPv4 10.192.0.0/10
+
+# Data directory inside the iKali home (keeps state contained).
+DataDirectory ~/.ikali/tor
+
+# Only act as a client; never relay others' traffic.
+ClientOnly 1
+
+# Conservative logging to a contained file.
+Log notice file ~/.ikali/tor/notices.log
+
+# Optional: pin or exclude exit nodes (uncomment and edit).
+# ExitNodes {us},{de}
+# ExcludeExitNodes {xx}
+# StrictNodes 1
