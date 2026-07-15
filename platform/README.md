@@ -78,6 +78,8 @@ Controller ist ein dünner Wrapper um `joinChallenge`; ein globaler Filter mappt
 
 | Methode & Pfad                          | Auth    | Zweck                                                  |
 | --------------------------------------- | ------- | ------------------------------------------------------ |
+| `POST /v1/users`                        | —       | Registrierung (18+-Gate); ID dient als Bearer-Token     |
+| `GET  /v1/users/me`                     | Bearer  | Eigenes Profil                                          |
 | `POST /v1/challenges`                   | Bearer  | Challenge erstellen (`PENDING_FUNDING`) + Funding-Absicht |
 | `POST /v1/challenges/:id/join`          | Bearer  | Teilnehmerplatz reservieren (201, sonst 4xx-Code)      |
 | `POST /v1/challenges/:id/submit`        | Bearer  | Einsendung abgeben (Stub)                               |
@@ -192,9 +194,9 @@ pnpm --filter @vcp/api test:e2e
 # API-Server starten (Port aus PORT, Default 8080):
 pnpm --filter @vcp/api start
 
-# Slot-Expiration-Worker starten (Dauerloop) bzw. einmalig:
-pnpm --filter @vcp/api worker:expire
-pnpm --filter @vcp/api worker:expire -- --once
+# Hintergrund-Worker (Dauerloop; `-- --once` für einen einzelnen Durchlauf):
+pnpm --filter @vcp/api worker:expire   # abgelaufene Reservierungen freigeben
+pnpm --filter @vcp/api worker:close    # Einsendungen abgelaufener Challenges schließen
 ```
 
 ### Definition of Done (`joinChallenge`)
@@ -210,24 +212,29 @@ konsistent.
   Modelle + angrenzende Entitäten), nicht die vollständigen 31 Enums / 22 Modelle
   des Gesamtentwurfs.
 - **Verifiziert:** In der Build-Umgebung wurden `pnpm install`, `prisma db push`,
-  `tsc --noEmit` (alle Pakete) sowie die Tests tatsächlich ausgeführt — **45 Tests grün**:
+  `tsc --noEmit` (alle Pakete) sowie die Tests tatsächlich ausgeführt — **50 Tests grün**:
   - Unit (18) — contracts (2), domain (8), config (3), payments (5).
-  - Integration gegen lokales PostgreSQL 16 (16): Pflicht-Concurrency-Test
-    (50 parallele Joins → exakt 10), Expiration-Worker, Finanzierungs-Lebenszyklus
-    (create → confirm → join) inkl. Ledger-Immutability, sowie der Geld-raus-Loop
+  - Integration gegen lokales PostgreSQL 16 (18): Pflicht-Concurrency-Test
+    (50 parallele Joins → exakt 10), Expiration- und Fristen-Worker,
+    Finanzierungs-Lebenszyklus inkl. Ledger-Immutability, sowie der Geld-raus-Loop
     (submit → moderate → close → select → payout) mit allen drei Auswahlquellen,
     Idempotenz, balancierter Payout-Buchung und paralleler Winner-Lock-Sicherheit.
-  - HTTP-e2e (11): join/get/health, create→Webhook→join, und der volle Geld-raus-Loop.
-  - Live per `curl` geprüft: kompletter Fluss create → Webhook → join → submit →
-    moderate → close → select-winner (`CREATOR`, → `WINNER_LOCKED`) → payout (`HELD`).
+  - HTTP-e2e (14): Onboarding (18+-Gate), join/get/health, create→Webhook→join,
+    und der volle Geld-raus-Loop.
+  - Live per `curl` geprüft: **voll self-serve ohne DB-Seeding** — Nutzer registrieren
+    → erstellen → Webhook-Funding → beitreten; sowie der komplette Geld-raus-Loop bis
+    `WINNER_LOCKED` und zurückgehaltener Auszahlung.
 
-## Nächste Schritte
+## Was fehlt bis „produktiv" (externe Abhängigkeiten)
 
-1. `FirebaseTokenVerifier` (App Check + Firebase Auth) statt `MockTokenVerifier`;
-   Nutzer-Onboarding (18+-Gate) statt direktem Anlegen von User-Rows.
-2. Fristen-Worker: Challenges nach Ablauf automatisch `SUBMISSIONS_CLOSED` setzen und
-   den `AUTO_FALLBACK` bei Ersteller-Untätigkeit auslösen.
-3. Einsendungs-Pipeline (Capture-Sessions, Upload, Transcoding) — benötigt externe
-   Dienste (GCS/Transcoder); bis dahin sind Einsendungen nur als Datensatz modelliert.
-4. Stripe-Testmodus als echter `PaymentProvider` (Refund/Transfer, Webhook-Signatur);
-   Admin-Moderationsqueue, Discover, Social Feed (Phasen 1/5–7).
+Der **komplette fachliche Kern-Loop** ist implementiert und getestet. Für den
+Produktivbetrieb fehlen v. a. Stränge mit externen Abhängigkeiten oder Freigaben:
+
+1. `FirebaseTokenVerifier` (App Check + Firebase Auth) statt `MockTokenVerifier` —
+   braucht Firebase-Projekt/Credentials.
+2. Einsendungs-Pipeline (In-App-Capture, Upload, Transcoding) — braucht GCS/Transcoder;
+   aktuell ist die Einsendung als Datensatz modelliert (kein echtes Video).
+3. Echter `PaymentProvider` (Stripe Connect, Testmodus): Transfer/Refund,
+   Webhook-Signaturprüfung, Payout-Ausführung — hinter den `false`-Flags.
+4. Produktoberflächen: Admin-Moderationsqueue, Discover, Social Feed (Phasen 1/6/7),
+   Mobile-App (Expo).

@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:e2e": "vitest run --config vitest.e2e.config.ts",
-    "worker:expire": "tsx src/workers/run-expire-slots.ts"
+    "worker:expire": "tsx src/workers/run-expire-slots.ts",
+    "worker:close": "tsx src/workers/run-close-submissions.ts"
   },
   "dependencies": {
     "@nestjs/common": "10",

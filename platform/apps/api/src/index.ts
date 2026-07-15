@@ -26,8 +26,15 @@ export { selectWinner } from './challenges/select-winner.js';
 export type { SelectWinnerResult } from './challenges/select-winner.js';
 export { processPayout } from './funding/process-payout.js';
 export type { ProcessPayoutResult } from './funding/process-payout.js';
+export { registerUser } from './users/register-user.js';
+export type { RegisterUserResult } from './users/register-user.js';
 export { expireSlots } from './workers/expire-slots.js';
 export type { ExpireSlotsDeps, ExpireSlotsResult } from './workers/expire-slots.js';
+export { closeExpiredSubmissions } from './workers/close-expired-submissions.js';
+export type {
+  CloseExpiredSubmissionsDeps,
+  CloseExpiredSubmissionsResult,
+} from './workers/close-expired-submissions.js';
 export {
   LoggingEventPublisher,
   InMemoryEventPublisher,

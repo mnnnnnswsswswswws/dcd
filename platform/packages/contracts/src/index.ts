@@ -86,6 +86,14 @@ export const ERROR_CODES = {
     httpStatus: 409,
     message: 'Du hast in dieser Challenge bereits abgestimmt.',
   },
+  UNDERAGE: {
+    httpStatus: 403,
+    message: 'Die Nutzung ist ausschließlich Personen ab 18 Jahren gestattet.',
+  },
+  USER_NOT_FOUND: {
+    httpStatus: 404,
+    message: 'Dieser Nutzer existiert nicht.',
+  },
 } as const satisfies Record<string, ErrorSpec>;
 
 export type ErrorCode = keyof typeof ERROR_CODES;
