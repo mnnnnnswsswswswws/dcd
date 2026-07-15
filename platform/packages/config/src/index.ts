@@ -16,6 +16,7 @@ const booleanFromEnv = z
 const baseSchema = z.object({
   DATABASE_URL: z.string().url(),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  PORT: z.coerce.number().int().positive().default(8080),
   SLOT_RESERVATION_TTL_MS: z.coerce.number().int().positive().default(600_000),
 
   REAL_MONEY_ENABLED: booleanFromEnv,

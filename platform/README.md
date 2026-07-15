@@ -27,13 +27,21 @@ packages/
   config/     Zod-Env-Schema mit Flag-Konsistenz-Guards
 apps/
   api/
+    src/main.ts                              # NestJS-Bootstrap (Port aus @vcp/config)
+    src/app.module.ts                        # Wurzelmodul
+    src/challenges/challenges.controller.ts  # POST /v1/challenges/:id/join, GET /v1/challenges/:id
     src/challenges/join-challenge.ts         # reine, transaktionssichere Slot-Reservierung
     src/challenges/join-challenge.handler.ts # framework-agnostischer HTTP-Adapter
+    src/auth/*                               # TokenVerifier (Mock/Firebase-Slot), AuthGuard
+    src/prisma/*                             # PrismaService/-Module
+    src/common/app-error.filter.ts           # AppError → einheitliche Fehlerantwort
+    src/health/health.controller.ts          # GET /health
     src/workers/expire-slots.ts              # Slot-Expiration-Worker (reine Funktion)
     src/workers/run-expire-slots.ts          # Runner (Intervall-Loop / --once)
     src/events/event-publisher.ts            # EventPublisher-Kontrakt + In-Memory/Logging-Impl
     test/join-challenge.integration.test.ts  # Pflichttest: 50 parallele Joins → exakt 10 Plätze
     test/expire-slots.integration.test.ts    # Worker: Freigabe abgelaufener Slots + FULL→OPEN
+    test/challenges.e2e.test.ts              # HTTP-e2e: join/get/health inkl. Auth & Fehlercodes
 ```
 
 ## `joinChallenge` — Design
@@ -54,6 +62,33 @@ ohne Nest-Bootstrap direkt in Vitest testbar ist. Ablauf in **einer** Transaktio
 
 Die `FOR UPDATE`-Sperre auf der Challenge-Row serialisiert konkurrierende Joins
 derselben Challenge und garantiert das harte Limit von 10 Plätzen.
+
+## HTTP-API
+
+NestJS-App (`apps/api`), die die reinen Kernfunktionen als Endpoints exponiert. Der
+Controller ist ein dünner Wrapper um `joinChallenge`; ein globaler Filter mappt
+`AppError` auf `{ error: { code, message } }`.
+
+| Methode & Pfad                 | Auth   | Zweck                                              |
+| ------------------------------ | ------ | -------------------------------------------------- |
+| `POST /v1/challenges/:id/join` | Bearer | Teilnehmerplatz reservieren (201, sonst 4xx-Code)  |
+| `GET  /v1/challenges/:id`      | —      | Öffentlicher Zustand inkl. belegter Plätze         |
+| `GET  /health`                 | —      | Liveness + DB-Erreichbarkeit                        |
+
+**Auth:** `AuthGuard` liest `Authorization: Bearer <token>` und verifiziert es über
+den `TokenVerifier`. Default ist der `MockTokenVerifier` (Token = User-ID, kein
+Netzwerk/Credentials nötig) — ideal für Entwicklung/Tests. In Produktion wird hier
+der `FirebaseTokenVerifier` eingehängt (App Check + Firebase Auth).
+
+Fehlerbeispiele: `401` (Token fehlt/ungültig), `403 CREATOR_CANNOT_JOIN`,
+`409 ALREADY_JOINED`, `409 CHALLENGE_FULL`, `400` (kein gültiges UUID-Format).
+
+Starten: `pnpm --filter @vcp/api start` (Port aus `PORT`, Default 8080). Beispiel:
+
+```sh
+curl -s -X POST http://localhost:8080/v1/challenges/<id>/join \
+  -H "Authorization: Bearer <user-id>"
+```
 
 ## Slot-Expiration-Worker — Design
 
@@ -89,6 +124,12 @@ pnpm test
 # Integrationstests (mit DB): Concurrency-Nachweis + Expiration-Worker
 pnpm --filter @vcp/api test:integration
 
+# HTTP-e2e-Tests (mit DB): Endpoints inkl. Auth & Fehlercodes
+pnpm --filter @vcp/api test:e2e
+
+# API-Server starten (Port aus PORT, Default 8080):
+pnpm --filter @vcp/api start
+
 # Slot-Expiration-Worker starten (Dauerloop) bzw. einmalig:
 pnpm --filter @vcp/api worker:expire
 pnpm --filter @vcp/api worker:expire -- --once
@@ -113,10 +154,15 @@ konsistent.
     Pflicht-Concurrency-Test (50 parallele Joins → exakt 10 Reservierungen,
     40 × `CHALLENGE_FULL`, Challenge `FULL`) sowie der Expiration-Worker
     (Freigabe abgelaufener Slots, `FULL` → `OPEN`, erneute Vergabe).
-  - Runner `worker:expire --once` als Smoke-Test erfolgreich durchlaufen.
+  - HTTP-e2e-Tests grün (8 Tests): join/get/health inkl. 201/400/401/403/404/409.
+  - Der API-Server wurde live gestartet und per `curl` geprüft: `GET /health`
+    (`db:up`), `POST …/join` (201), Wiederholung (409 `ALREADY_JOINED`), Ersteller
+    (403), ohne Token (401).
 
 ## Nächste Schritte
 
-1. NestJS-Controller `POST /v1/challenges/:id/join` als dünner Wrapper um
-   `joinChallenge` (AppCheckGuard + FirebaseAuthGuard liefern `userId`).
-2. Phase 1: Challenge-Erstellungs-Wizard, Admin-Moderationsqueue, Discover.
+1. `FirebaseTokenVerifier` (App Check + Firebase Auth) statt `MockTokenVerifier`
+   in `AuthModule` einhängen; Provider-Auswahl über Env/Flag.
+2. Challenge-Erstellung + Vollfinanzierung (Stripe-Testmodus, Webhook als einzige
+   Publish-Quelle) — bis dahin werden Challenges direkt in der DB angelegt.
+3. Phase 1: Challenge-Erstellungs-Wizard, Admin-Moderationsqueue, Discover.
