@@ -1,0 +1,135 @@
+// Video-Challenge-Plattform — Prisma-Schema (fokussierter Phase-0-Ausschnitt).
+//
+// Dieser Ausschnitt enthält die Modelle und Enums, die für die aktive Aufgabe
+// `joinChallenge` (transaktionssichere Slot-Reservierung) benötigt werden, sowie
+// die direkt angrenzenden Entitäten (User, Submission, WinnerDecision), damit die
+// nicht verhandelbaren Constraints (Unique-Slot pro Nutzer, eine Einsendung pro
+// Nutzer, genau eine Winner-Decision pro Challenge) real durchgesetzt werden.
+//
+// Geldbeträge ausschließlich als Integer in Cent. Timestamps in UTC. IDs als UUID.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ChallengeStatus {
+  DRAFT
+  PENDING_FUNDING
+  OPEN
+  FULL
+  SUBMISSIONS_CLOSED
+  IN_REVIEW
+  SELECTION
+  WINNER_LOCKED
+  PAID_OUT
+  CANCELLED
+  EXPIRED
+}
+
+enum SlotStatus {
+  RESERVED
+  CAPTURING
+  UPLOADING
+  SUBMITTED
+  EXPIRED
+  CANCELLED
+}
+
+enum SubmissionStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  WINNER
+  LOSER
+}
+
+enum SelectionMode {
+  CREATOR_DECIDES
+  COMMUNITY_VOTE
+}
+
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  isAdult   Boolean  @default(false) @map("is_adult")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  createdChallenges Challenge[]  @relation("ChallengeCreator")
+  slots             Slot[]
+  submissions       Submission[]
+
+  @@map("users")
+}
+
+model Challenge {
+  id                 String          @id @default(uuid()) @db.Uuid
+  creatorId          String          @map("creator_id") @db.Uuid
+  status             ChallengeStatus @default(DRAFT)
+  selectionMode      SelectionMode   @map("selection_mode")
+  prizeAmountCents   Int             @map("prize_amount_cents")
+  maxSlots           Int             @default(10) @map("max_slots")
+  submissionDeadline DateTime?       @map("submission_deadline") @db.Timestamptz(6)
+  createdAt          DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  creator     User             @relation("ChallengeCreator", fields: [creatorId], references: [id])
+  slots       Slot[]
+  submissions Submission[]
+  decision    WinnerDecision?
+
+  @@index([status])
+  @@map("challenges")
+}
+
+model Slot {
+  id            String     @id @default(uuid()) @db.Uuid
+  challengeId   String     @map("challenge_id") @db.Uuid
+  participantId String     @map("participant_id") @db.Uuid
+  status        SlotStatus @default(RESERVED)
+  expiresAt     DateTime?  @map("expires_at") @db.Timestamptz(6)
+  reservedAt    DateTime   @default(now()) @map("reserved_at") @db.Timestamptz(6)
+  createdAt     DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  challenge   Challenge @relation(fields: [challengeId], references: [id])
+  participant User      @relation(fields: [participantId], references: [id])
+
+  // Ein Nutzer belegt höchstens einen Slot pro Challenge.
+  @@unique([challengeId, participantId])
+  @@index([challengeId, status])
+  @@map("slots")
+}
+
+model Submission {
+  id            String           @id @default(uuid()) @db.Uuid
+  challengeId   String           @map("challenge_id") @db.Uuid
+  participantId String           @map("participant_id") @db.Uuid
+  status        SubmissionStatus @default(DRAFT)
+  createdAt     DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  challenge   Challenge @relation(fields: [challengeId], references: [id])
+  participant User      @relation(fields: [participantId], references: [id])
+
+  // Eine gültige Einsendung pro Nutzer pro Challenge.
+  @@unique([challengeId, participantId])
+  @@index([challengeId, status])
+  @@map("submissions")
+}
+
+model WinnerDecision {
+  id             String   @id @default(uuid()) @db.Uuid
+  challengeId    String   @unique @map("challenge_id") @db.Uuid
+  winnerSlotId   String?  @map("winner_slot_id") @db.Uuid
+  decisionSource String   @map("decision_source")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  challenge Challenge @relation(fields: [challengeId], references: [id])
+
+  @@map("winner_decisions")
+}
