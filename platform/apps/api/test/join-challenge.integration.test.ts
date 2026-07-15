@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { AppError } from '@vcp/contracts';
 import { joinChallenge } from '../src/challenges/join-challenge.js';
 import { InMemoryEventPublisher } from '../src/events/event-publisher.js';
+import { resetDb } from './reset-db.js';
 
 /**
  * Pflichttest (Definition of Done) für `joinChallenge`.
@@ -20,12 +21,7 @@ import { InMemoryEventPublisher } from '../src/events/event-publisher.js';
 const prisma = new PrismaClient();
 
 async function reset(): Promise<void> {
-  // Reihenfolge wegen Foreign Keys.
-  await prisma.slot.deleteMany();
-  await prisma.submission.deleteMany();
-  await prisma.winnerDecision.deleteMany();
-  await prisma.challenge.deleteMany();
-  await prisma.user.deleteMany();
+  await resetDb(prisma);
 }
 
 beforeAll(async () => {

@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Get,
   HttpCode,
@@ -9,21 +10,43 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
+import type { PaymentProvider } from '@vcp/payments';
 import type { EventPublisher } from '../events/event-publisher.js';
 import { EVENT_PUBLISHER } from '../events/events.module.js';
+import { PAYMENT_PROVIDER } from '../payments/payments.module.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AuthGuard } from '../auth/auth.guard.js';
 import { CurrentUserId } from '../auth/current-user.decorator.js';
 import { joinChallenge, type JoinChallengeResult } from './join-challenge.js';
+import {
+  createChallenge,
+  type CreateChallengeInput,
+  type CreateChallengeResult,
+} from './create-challenge.js';
 
 @Controller('v1/challenges')
 export class ChallengesController {
-  // @Inject(PrismaService) explizit, damit die DI auch unter Transpilern ohne
+  // @Inject explizit, damit die DI auch unter Transpilern ohne
   // emitDecoratorMetadata (esbuild/tsx) funktioniert, nicht nur unter SWC.
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(EVENT_PUBLISHER) private readonly events: EventPublisher,
+    @Inject(PAYMENT_PROVIDER) private readonly payments: PaymentProvider,
   ) {}
+
+  /** Erstellt eine Challenge (Zustand PENDING_FUNDING) samt Finanzierungs-Absicht. */
+  @Post()
+  @HttpCode(201)
+  @UseGuards(AuthGuard)
+  async create(
+    @CurrentUserId() userId: string,
+    @Body() body: Omit<CreateChallengeInput, 'creatorId'>,
+  ): Promise<CreateChallengeResult> {
+    return createChallenge(
+      { prisma: this.prisma, payments: this.payments, events: this.events },
+      { ...body, creatorId: userId },
+    );
+  }
 
   /** Öffentliche Leseansicht einer Challenge (Zustand einsehen). */
   @Get(':id')

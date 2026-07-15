@@ -18,6 +18,8 @@ const baseSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(8080),
   SLOT_RESERVATION_TTL_MS: z.coerce.number().int().positive().default(600_000),
+  /** Gemeinsames Secret zur Verifikation eingehender Zahlungs-Webhooks. */
+  WEBHOOK_SECRET: z.string().min(1).default('dev-webhook-secret'),
 
   REAL_MONEY_ENABLED: booleanFromEnv,
   STRIPE_LIVE_MODE: booleanFromEnv,

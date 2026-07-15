@@ -25,6 +25,7 @@ packages/
   contracts/  ERROR_CODES (deutsche Meldungen) + apiError()
   domain/     State-Machines als Übergangsmatrizen + COUNTING_SLOT_STATUSES
   config/     Zod-Env-Schema mit Flag-Konsistenz-Guards
+  payments/   PaymentProvider + MockPaymentProvider (idempotent) + Factory-Guard
 apps/
   api/
     src/main.ts                              # NestJS-Bootstrap (Port aus @vcp/config)
@@ -69,11 +70,13 @@ NestJS-App (`apps/api`), die die reinen Kernfunktionen als Endpoints exponiert. 
 Controller ist ein dünner Wrapper um `joinChallenge`; ein globaler Filter mappt
 `AppError` auf `{ error: { code, message } }`.
 
-| Methode & Pfad                 | Auth   | Zweck                                              |
-| ------------------------------ | ------ | -------------------------------------------------- |
-| `POST /v1/challenges/:id/join` | Bearer | Teilnehmerplatz reservieren (201, sonst 4xx-Code)  |
-| `GET  /v1/challenges/:id`      | —      | Öffentlicher Zustand inkl. belegter Plätze         |
-| `GET  /health`                 | —      | Liveness + DB-Erreichbarkeit                        |
+| Methode & Pfad                 | Auth    | Zweck                                                  |
+| ------------------------------ | ------- | ------------------------------------------------------ |
+| `POST /v1/challenges`          | Bearer  | Challenge erstellen (`PENDING_FUNDING`) + Funding-Absicht |
+| `POST /v1/challenges/:id/join` | Bearer  | Teilnehmerplatz reservieren (201, sonst 4xx-Code)      |
+| `GET  /v1/challenges/:id`      | —       | Öffentlicher Zustand inkl. belegter Plätze             |
+| `POST /v1/webhooks/payments`   | Secret  | Vollfinanzierung bestätigen → veröffentlichen (idempotent) |
+| `GET  /health`                 | —       | Liveness + DB-Erreichbarkeit                            |
 
 **Auth:** `AuthGuard` liest `Authorization: Bearer <token>` und verifiziert es über
 den `TokenVerifier`. Default ist der `MockTokenVerifier` (Token = User-ID, kein
@@ -89,6 +92,27 @@ Starten: `pnpm --filter @vcp/api start` (Port aus `PORT`, Default 8080). Beispie
 curl -s -X POST http://localhost:8080/v1/challenges/<id>/join \
   -H "Authorization: Bearer <user-id>"
 ```
+
+## Finanzierung & Veröffentlichung
+
+Eine Challenge wird **nicht** offen erstellt. Der Lebenszyklus:
+
+1. `POST /v1/challenges` legt sie in `PENDING_FUNDING` an, fixiert Auswahlmodus,
+   Preis und Frist und erzeugt über den `PaymentProvider` eine Finanzierungs-Absicht
+   (Escrow der Preissumme, Betrag in Cent). Antwort enthält `funding.clientSecret`.
+2. Nach Zahlung liefert der Provider einen **Webhook** an `POST /v1/webhooks/payments`
+   (Secret-geprüft). `confirmFunding` ist die **einzige** Veröffentlichungsquelle —
+   niemals eine Client-Erfolgsmeldung. In **einer** Transaktion (Row-Lock der
+   Challenge): Betrag prüfen, Finanzierung `CONFIRMED`, doppelte Buchung ins
+   **unveränderliche** Ledger, Challenge `PENDING_FUNDING` → `OPEN`.
+3. Erst jetzt greift `joinChallenge`.
+
+Der Webhook ist **idempotent**: erneute Zustellung ist ein No-Op (keine doppelten
+Buchungen). Geld bewegt sich ausschließlich über idempotente Backend-Prozesse; das
+Ledger ist per DB-Trigger (`prisma/sql/immutability.sql`) gegen UPDATE/DELETE
+gesperrt. Echtgeld bleibt deaktiviert: `createPaymentProvider` liefert den
+`MockPaymentProvider` und wirft hart, sobald `REAL_MONEY_ENABLED=true` ohne
+Live-Anbindung gesetzt wird.
 
 ## Slot-Expiration-Worker — Design
 
@@ -117,6 +141,8 @@ pnpm install
 pnpm db:up                       # PostgreSQL 16 via docker compose
 pnpm prisma:generate             # Prisma-Client generieren
 pnpm exec prisma migrate deploy  # Schema anwenden (oder: prisma db push)
+# Ledger-Immutability-Trigger anwenden (prisma db push erzeugt keine Trigger):
+psql "$DATABASE_URL" -f prisma/sql/immutability.sql
 
 # Unit-Tests (ohne DB): contracts, domain, config, api-Unit
 pnpm test
@@ -148,21 +174,23 @@ konsistent.
   Modelle + angrenzende Entitäten), nicht die vollständigen 31 Enums / 22 Modelle
   des Gesamtentwurfs.
 - **Verifiziert:** In der Build-Umgebung wurden `pnpm install`, `prisma db push`,
-  `tsc --noEmit` (alle Pakete) sowie die Tests tatsächlich ausgeführt:
-  - Unit-Tests grün — contracts (2), domain (8), config (3).
-  - Integrationstests gegen ein lokales PostgreSQL 16 grün (6 Tests): der
-    Pflicht-Concurrency-Test (50 parallele Joins → exakt 10 Reservierungen,
-    40 × `CHALLENGE_FULL`, Challenge `FULL`) sowie der Expiration-Worker
-    (Freigabe abgelaufener Slots, `FULL` → `OPEN`, erneute Vergabe).
-  - HTTP-e2e-Tests grün (8 Tests): join/get/health inkl. 201/400/401/403/404/409.
-  - Der API-Server wurde live gestartet und per `curl` geprüft: `GET /health`
-    (`db:up`), `POST …/join` (201), Wiederholung (409 `ALREADY_JOINED`), Ersteller
-    (403), ohne Token (401).
+  `tsc --noEmit` (alle Pakete) sowie die Tests tatsächlich ausgeführt — **39 Tests grün**:
+  - Unit (18) — contracts (2), domain (8), config (3), payments (5).
+  - Integration gegen lokales PostgreSQL 16 (11): Pflicht-Concurrency-Test
+    (50 parallele Joins → exakt 10), Expiration-Worker, sowie der volle
+    Finanzierungs-Lebenszyklus (create → confirm → join) inkl. Idempotenz,
+    doppelter Buchung und Ledger-Immutability (DB-Trigger lehnt UPDATE ab).
+  - HTTP-e2e (10): join/get/health + create→Webhook→join, 200/201/400/401/403/404/409.
+  - Live per `curl` geprüft: `POST /v1/challenges` (`PENDING_FUNDING`), Beitritt vor
+    Funding (409), Webhook falsch (401)/korrekt (veröffentlicht → `OPEN`), Beitritt
+    danach (201).
 
 ## Nächste Schritte
 
-1. `FirebaseTokenVerifier` (App Check + Firebase Auth) statt `MockTokenVerifier`
-   in `AuthModule` einhängen; Provider-Auswahl über Env/Flag.
-2. Challenge-Erstellung + Vollfinanzierung (Stripe-Testmodus, Webhook als einzige
-   Publish-Quelle) — bis dahin werden Challenges direkt in der DB angelegt.
-3. Phase 1: Challenge-Erstellungs-Wizard, Admin-Moderationsqueue, Discover.
+1. Einsendungs-Pipeline (Capture-Sessions, Upload, Transcoding) — benötigt externe
+   Dienste (GCS/Transcoder); bis dahin sind Einsendungen nur als Datensatz modelliert.
+2. Gewinnerauswahl + idempotente Auszahlung (Winner-Lock, Ledger, Payout-Job,
+   Fallback-Worker) über den Mock-Provider — spiegelt die „Geld-raus"-Seite.
+3. `FirebaseTokenVerifier` (App Check + Firebase Auth) statt `MockTokenVerifier`;
+   Nutzer-Onboarding (18+-Gate) statt direktem Anlegen von User-Rows.
+4. Admin-Moderationsqueue, Discover, Social Feed (Phasen 1/6/7).

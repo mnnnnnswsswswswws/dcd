@@ -17,6 +17,10 @@ CREATE TYPE "SubmissionStatus" AS ENUM (
 
 CREATE TYPE "SelectionMode" AS ENUM ('CREATOR_DECIDES', 'COMMUNITY_VOTE');
 
+CREATE TYPE "FundingStatus" AS ENUM ('PENDING', 'CONFIRMED', 'FAILED', 'REFUNDED');
+
+CREATE TYPE "LedgerDirection" AS ENUM ('DEBIT', 'CREDIT');
+
 -- users -----------------------------------------------------------------------
 CREATE TABLE "users" (
   "id"         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -79,3 +83,49 @@ CREATE TABLE "winner_decisions" (
 -- Genau eine Winner-Decision pro Challenge.
 CREATE UNIQUE INDEX "winner_decisions_challenge_id_key"
   ON "winner_decisions" ("challenge_id");
+
+-- challenge_fundings ----------------------------------------------------------
+CREATE TABLE "challenge_fundings" (
+  "id"              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "challenge_id"    UUID NOT NULL REFERENCES "challenges"("id"),
+  "provider"        TEXT NOT NULL,
+  "provider_ref"    TEXT NOT NULL,
+  "idempotency_key" TEXT NOT NULL,
+  "amount_cents"    INTEGER NOT NULL,
+  "currency"        TEXT NOT NULL DEFAULT 'eur',
+  "status"          "FundingStatus" NOT NULL DEFAULT 'PENDING',
+  "created_at"      TIMESTAMPTZ(6) NOT NULL DEFAULT now(),
+  "confirmed_at"    TIMESTAMPTZ(6)
+);
+CREATE UNIQUE INDEX "challenge_fundings_challenge_id_key" ON "challenge_fundings" ("challenge_id");
+CREATE UNIQUE INDEX "challenge_fundings_provider_ref_key" ON "challenge_fundings" ("provider_ref");
+CREATE UNIQUE INDEX "challenge_fundings_idempotency_key_key" ON "challenge_fundings" ("idempotency_key");
+CREATE INDEX "challenge_fundings_status_idx" ON "challenge_fundings" ("status");
+
+-- ledger_entries (append-only, siehe Trigger unten) ---------------------------
+CREATE TABLE "ledger_entries" (
+  "id"           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "challenge_id" UUID NOT NULL REFERENCES "challenges"("id"),
+  "account"      TEXT NOT NULL,
+  "direction"    "LedgerDirection" NOT NULL,
+  "amount_cents" INTEGER NOT NULL,
+  "entry_type"   TEXT NOT NULL,
+  "reference_id" UUID,
+  "created_at"   TIMESTAMPTZ(6) NOT NULL DEFAULT now()
+);
+CREATE INDEX "ledger_entries_challenge_id_idx" ON "ledger_entries" ("challenge_id");
+
+-- Unveränderlichkeit der Buchführung erzwingen.
+CREATE OR REPLACE FUNCTION reject_ledger_mutation() RETURNS trigger AS $$
+BEGIN
+  RAISE EXCEPTION 'ledger_entries ist unveränderlich (append-only)';
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER ledger_entries_no_update
+  BEFORE UPDATE ON ledger_entries
+  FOR EACH ROW EXECUTE FUNCTION reject_ledger_mutation();
+
+CREATE TRIGGER ledger_entries_no_delete
+  BEFORE DELETE ON ledger_entries
+  FOR EACH ROW EXECUTE FUNCTION reject_ledger_mutation();

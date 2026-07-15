@@ -6,6 +6,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { AppModule } from '../src/app.module.js';
 import { AppErrorFilter } from '../src/common/app-error.filter.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
+import { resetDb } from './reset-db.js';
 
 /**
  * End-to-End-Test der HTTP-Schicht: bootstrappt die echte Nest-App und ruft die
@@ -16,11 +17,7 @@ let app: INestApplication;
 let prisma: PrismaService;
 
 async function reset(): Promise<void> {
-  await prisma.slot.deleteMany();
-  await prisma.submission.deleteMany();
-  await prisma.winnerDecision.deleteMany();
-  await prisma.challenge.deleteMany();
-  await prisma.user.deleteMany();
+  await resetDb(prisma);
 }
 
 async function seed(status: 'OPEN' | 'FULL' = 'OPEN') {
@@ -134,6 +131,73 @@ describe('GET /v1/challenges/:id', () => {
     await request(app.getHttpServer())
       .get('/v1/challenges/00000000-0000-0000-0000-000000000000')
       .expect(404);
+  });
+});
+
+describe('Lebenszyklus über HTTP: erstellen → Webhook → beitreten', () => {
+  const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET ?? 'dev-webhook-secret';
+
+  it('erstellt, veröffentlicht per Webhook und erlaubt dann den Beitritt', async () => {
+    const creator = await prisma.user.create({ data: { isAdult: true } });
+
+    // 1. Challenge erstellen (PENDING_FUNDING) + Finanzierungs-Absicht.
+    const createRes = await request(app.getHttpServer())
+      .post('/v1/challenges')
+      .set('Authorization', `Bearer ${creator.id}`)
+      .send({
+        selectionMode: 'CREATOR_DECIDES',
+        prizeAmountCents: 10_000,
+        submissionDeadline: new Date(Date.now() + 3_600_000).toISOString(),
+      })
+      .expect(201);
+    expect(createRes.body.challenge.status).toBe('PENDING_FUNDING');
+    const challengeId = createRes.body.challenge.id as string;
+    const providerRef = createRes.body.funding.providerRef as string;
+
+    // 2. Beitritt vor Finanzierung scheitert.
+    const participant = await prisma.user.create({ data: { isAdult: true } });
+    await request(app.getHttpServer())
+      .post(`/v1/challenges/${challengeId}/join`)
+      .set('Authorization', `Bearer ${participant.id}`)
+      .expect(409);
+
+    // 3. Webhook mit falschem Secret → 401.
+    await request(app.getHttpServer())
+      .post('/v1/webhooks/payments')
+      .set('x-webhook-secret', 'falsch')
+      .send({ type: 'funding.succeeded', providerRef, amountCents: 10_000 })
+      .expect(401);
+
+    // 4. Korrekter Webhook → Veröffentlichung.
+    const hook = await request(app.getHttpServer())
+      .post('/v1/webhooks/payments')
+      .set('x-webhook-secret', WEBHOOK_SECRET)
+      .send({ type: 'funding.succeeded', providerRef, amountCents: 10_000 })
+      .expect(200);
+    expect(hook.body).toMatchObject({ received: true, published: true });
+
+    // 5. Erneuter Webhook ist idempotent.
+    const again = await request(app.getHttpServer())
+      .post('/v1/webhooks/payments')
+      .set('x-webhook-secret', WEBHOOK_SECRET)
+      .send({ type: 'funding.succeeded', providerRef, amountCents: 10_000 })
+      .expect(200);
+    expect(again.body).toMatchObject({ received: true, published: false, alreadyConfirmed: true });
+
+    // 6. Jetzt ist der Beitritt möglich.
+    await request(app.getHttpServer())
+      .post(`/v1/challenges/${challengeId}/join`)
+      .set('Authorization', `Bearer ${participant.id}`)
+      .expect(201);
+  });
+
+  it('lehnt ungültige Eingaben beim Erstellen ab (400)', async () => {
+    const creator = await prisma.user.create({ data: { isAdult: true } });
+    await request(app.getHttpServer())
+      .post('/v1/challenges')
+      .set('Authorization', `Bearer ${creator.id}`)
+      .send({ selectionMode: 'CREATOR_DECIDES', prizeAmountCents: -1, submissionDeadline: new Date(Date.now() + 3_600_000).toISOString() })
+      .expect(400);
   });
 });
 

@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { expireSlots } from '../src/workers/expire-slots.js';
 import { joinChallenge } from '../src/challenges/join-challenge.js';
 import { InMemoryEventPublisher } from '../src/events/event-publisher.js';
+import { resetDb } from './reset-db.js';
 
 /**
  * Integrationstest für den Slot-Expiration-Worker.
@@ -13,11 +14,7 @@ import { InMemoryEventPublisher } from '../src/events/event-publisher.js';
 const prisma = new PrismaClient();
 
 async function reset(): Promise<void> {
-  await prisma.slot.deleteMany();
-  await prisma.submission.deleteMany();
-  await prisma.winnerDecision.deleteMany();
-  await prisma.challenge.deleteMany();
-  await prisma.user.deleteMany();
+  await resetDb(prisma);
 }
 
 async function seedChallenge(status: 'OPEN' | 'FULL' = 'OPEN') {

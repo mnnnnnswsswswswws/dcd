@@ -54,6 +54,18 @@ enum SelectionMode {
   COMMUNITY_VOTE
 }
 
+enum FundingStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+  REFUNDED
+}
+
+enum LedgerDirection {
+  DEBIT
+  CREDIT
+}
+
 model User {
   id        String   @id @default(uuid()) @db.Uuid
   isAdult   Boolean  @default(false) @map("is_adult")
@@ -81,9 +93,47 @@ model Challenge {
   slots       Slot[]
   submissions Submission[]
   decision    WinnerDecision?
+  funding     ChallengeFunding?
+  ledger      LedgerEntry[]
 
   @@index([status])
   @@map("challenges")
+}
+
+model ChallengeFunding {
+  id             String        @id @default(uuid()) @db.Uuid
+  challengeId    String        @unique @map("challenge_id") @db.Uuid
+  provider       String
+  providerRef    String        @unique @map("provider_ref")
+  idempotencyKey String        @unique @map("idempotency_key")
+  amountCents    Int           @map("amount_cents")
+  currency       String        @default("eur")
+  status         FundingStatus @default(PENDING)
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  confirmedAt    DateTime?     @map("confirmed_at") @db.Timestamptz(6)
+
+  challenge Challenge @relation(fields: [challengeId], references: [id])
+
+  @@index([status])
+  @@map("challenge_fundings")
+}
+
+/// Unveränderliche, doppelte Buchführung. Updates/Deletes werden per DB-Trigger
+/// (prisma/sql/immutability.sql) hart abgelehnt; die App schreibt ausschließlich neu.
+model LedgerEntry {
+  id          String          @id @default(uuid()) @db.Uuid
+  challengeId String          @map("challenge_id") @db.Uuid
+  account     String
+  direction   LedgerDirection
+  amountCents Int             @map("amount_cents")
+  entryType   String          @map("entry_type")
+  referenceId String?         @map("reference_id") @db.Uuid
+  createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  challenge Challenge @relation(fields: [challengeId], references: [id])
+
+  @@index([challengeId])
+  @@map("ledger_entries")
 }
 
 model Slot {

@@ -21,8 +21,10 @@
     "@vcp/config": "workspace:*",
     "@vcp/contracts": "workspace:*",
     "@vcp/domain": "workspace:*",
+    "@vcp/payments": "workspace:^",
     "reflect-metadata": "0.2",
-    "rxjs": "7"
+    "rxjs": "7",
+    "zod": "3.23.8"
   },
   "devDependencies": {
     "@nestjs/testing": "10",

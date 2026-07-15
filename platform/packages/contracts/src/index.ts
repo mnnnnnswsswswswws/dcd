@@ -42,6 +42,22 @@ export const ERROR_CODES = {
     httpStatus: 409,
     message: 'Du hast zu dieser Challenge bereits eine Einsendung abgegeben.',
   },
+  INVALID_INPUT: {
+    httpStatus: 400,
+    message: 'Die Eingabe ist ungültig.',
+  },
+  FUNDING_NOT_FOUND: {
+    httpStatus: 404,
+    message: 'Zu dieser Zahlung wurde keine Finanzierung gefunden.',
+  },
+  FUNDING_AMOUNT_MISMATCH: {
+    httpStatus: 409,
+    message: 'Der bestätigte Betrag entspricht nicht der geforderten Vollfinanzierung.',
+  },
+  CHALLENGE_INVALID_STATE: {
+    httpStatus: 409,
+    message: 'Diese Aktion ist im aktuellen Zustand der Challenge nicht möglich.',
+  },
 } as const satisfies Record<string, ErrorSpec>;
 
 export type ErrorCode = keyof typeof ERROR_CODES;
