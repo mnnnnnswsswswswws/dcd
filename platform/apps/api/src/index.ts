@@ -6,6 +6,8 @@ export type {
 } from './challenges/join-challenge.js';
 export { handleJoinChallenge } from './challenges/join-challenge.handler.js';
 export type { JoinChallengeHttpResponse } from './challenges/join-challenge.handler.js';
+export { expireSlots } from './workers/expire-slots.js';
+export type { ExpireSlotsDeps, ExpireSlotsResult } from './workers/expire-slots.js';
 export {
   LoggingEventPublisher,
   InMemoryEventPublisher,

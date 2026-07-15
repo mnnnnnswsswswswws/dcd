@@ -27,10 +27,13 @@ packages/
   config/     Zod-Env-Schema mit Flag-Konsistenz-Guards
 apps/
   api/
-    src/challenges/join-challenge.ts         # aktive Aufgabe: reine, transaktionssichere Funktion
+    src/challenges/join-challenge.ts         # reine, transaktionssichere Slot-Reservierung
     src/challenges/join-challenge.handler.ts # framework-agnostischer HTTP-Adapter
+    src/workers/expire-slots.ts              # Slot-Expiration-Worker (reine Funktion)
+    src/workers/run-expire-slots.ts          # Runner (Intervall-Loop / --once)
     src/events/event-publisher.ts            # EventPublisher-Kontrakt + In-Memory/Logging-Impl
     test/join-challenge.integration.test.ts  # Pflichttest: 50 parallele Joins → exakt 10 Plätze
+    test/expire-slots.integration.test.ts    # Worker: Freigabe abgelaufener Slots + FULL→OPEN
 ```
 
 ## `joinChallenge` — Design
@@ -52,6 +55,23 @@ ohne Nest-Bootstrap direkt in Vitest testbar ist. Ablauf in **einer** Transaktio
 Die `FOR UPDATE`-Sperre auf der Challenge-Row serialisiert konkurrierende Joins
 derselben Challenge und garantiert das harte Limit von 10 Plätzen.
 
+## Slot-Expiration-Worker — Design
+
+`expireSlots` gibt abgelaufene Reservierungen frei und macht dadurch volle
+Challenges wieder beitretbar. Ohne diesen Sweep würden abgelaufene `RESERVED`-Slots
+Plätze dauerhaft blockieren. Gleiche Bauweise wie `joinChallenge` (reine Funktion,
+Row-Lock, Event nach Commit); pro betroffener Challenge eine eigene Transaktion:
+
+1. Kandidaten ermitteln: Challenges mit `RESERVED`-Slots, deren `expires_at < now`.
+2. Challenge-Row per `SELECT ... FOR UPDATE` sperren (keine Konkurrenz mit `joinChallenge`).
+3. Abgelaufene `RESERVED`-Slots → `EXPIRED`.
+4. Ist die Challenge `FULL` und nun `< max_slots` belegt: Status → `OPEN`.
+5. Nach dem Commit Events `challenge.slots_expired` und ggf. `challenge.reopened`.
+
+Ein Durchlauf ist idempotent. Runner: `pnpm --filter @vcp/api worker:expire`
+(Dauerloop, alle 30s) bzw. `worker:expire -- --once` (einmalig, z. B. für
+Cloud Scheduler / Cloud Tasks).
+
 ## Lokal ausführen
 
 Voraussetzung: Node ≥ 20, pnpm 9, Docker (für PostgreSQL).
@@ -66,8 +86,12 @@ pnpm exec prisma migrate deploy  # Schema anwenden (oder: prisma db push)
 # Unit-Tests (ohne DB): contracts, domain, config, api-Unit
 pnpm test
 
-# Pflicht-Integrationstest (mit DB): Concurrency-Nachweis
+# Integrationstests (mit DB): Concurrency-Nachweis + Expiration-Worker
 pnpm --filter @vcp/api test:integration
+
+# Slot-Expiration-Worker starten (Dauerloop) bzw. einmalig:
+pnpm --filter @vcp/api worker:expire
+pnpm --filter @vcp/api worker:expire -- --once
 ```
 
 ### Definition of Done (`joinChallenge`)
@@ -85,11 +109,14 @@ konsistent.
 - **Verifiziert:** In der Build-Umgebung wurden `pnpm install`, `prisma db push`,
   `tsc --noEmit` (alle Pakete) sowie die Tests tatsächlich ausgeführt:
   - Unit-Tests grün — contracts (2), domain (8), config (3).
-  - Integrationstest gegen ein lokales PostgreSQL 16 grün (3 Tests), inklusive des
-    Pflicht-Concurrency-Tests: 50 parallele Joins → exakt 10 Reservierungen,
-    40 × `CHALLENGE_FULL`, Challenge `FULL`, keine doppelte Reservierung.
+  - Integrationstests gegen ein lokales PostgreSQL 16 grün (6 Tests): der
+    Pflicht-Concurrency-Test (50 parallele Joins → exakt 10 Reservierungen,
+    40 × `CHALLENGE_FULL`, Challenge `FULL`) sowie der Expiration-Worker
+    (Freigabe abgelaufener Slots, `FULL` → `OPEN`, erneute Vergabe).
+  - Runner `worker:expire --once` als Smoke-Test erfolgreich durchlaufen.
 
 ## Nächste Schritte
 
-1. Slot-Expiration-Worker (abgelaufene Slots freigeben, `FULL` → `OPEN`).
-2. Phase 1: Challenge-Erstellungs-Wizard, Admin-Moderationsqueue.
+1. NestJS-Controller `POST /v1/challenges/:id/join` als dünner Wrapper um
+   `joinChallenge` (AppCheckGuard + FirebaseAuthGuard liefern `userId`).
+2. Phase 1: Challenge-Erstellungs-Wizard, Admin-Moderationsqueue, Discover.

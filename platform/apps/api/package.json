@@ -8,12 +8,16 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "test:integration": "vitest run --config vitest.integration.config.ts"
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "worker:expire": "tsx src/workers/run-expire-slots.ts"
   },
   "dependencies": {
     "@prisma/client": "5.22.0",
     "@vcp/config": "workspace:*",
     "@vcp/contracts": "workspace:*",
     "@vcp/domain": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "4"
   }
 }
