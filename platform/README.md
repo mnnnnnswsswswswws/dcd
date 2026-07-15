@@ -206,6 +206,19 @@ Der Integrationstest (`apps/api/test/join-challenge.integration.test.ts`) belegt
 `CHALLENGE_FULL`**, keine doppelte Reservierung, Challenge-Status `FULL`, Daten
 konsistent.
 
+## Deployment
+
+Ein Container-Image (`Dockerfile`) bedient alle Prozesse (API, Worker, Migration) —
+der Prozess wird über das `command` gewählt. Vollständiger lokaler Stack:
+
+```sh
+docker compose -f docker-compose.app.yml up --build   # API auf :8080, migrate-Job + Worker
+```
+
+Der produktive Migrations-Pfad ist `prisma migrate deploy` (die handgeschriebene
+Migration erzeugt inkl. Ledger-Immutability-Trigger ein produktionsgleiches Schema).
+Details und eine Cloud-Run-Skizze: [`docs/DEPLOY.md`](docs/DEPLOY.md).
+
 ## Status
 
 - Dies ist ein **fokussierter** Phase-0-Ausschnitt (die für `joinChallenge` nötigen
@@ -224,6 +237,10 @@ konsistent.
   - Live per `curl` geprüft: **voll self-serve ohne DB-Seeding** — Nutzer registrieren
     → erstellen → Webhook-Funding → beitreten; sowie der komplette Geld-raus-Loop bis
     `WINNER_LOCKED` und zurückgehaltener Auszahlung.
+  - **Deploy-Pfad geprüft:** `prisma migrate deploy` gegen PostgreSQL 16 (Migration inkl.
+    Trigger), gesamte Test-Suite grün gegen die **migrierte** DB; alle Container-Commands
+    (`start`, `worker:expire`/`worker:close --once`, `migrate deploy`) direkt verifiziert.
+    Der Docker-Image-Build selbst wurde mangels Daemon in dieser Umgebung nicht ausgeführt.
 
 ## Was fehlt bis „produktiv" (externe Abhängigkeiten)
 
