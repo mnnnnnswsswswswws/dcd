@@ -70,6 +70,17 @@ export function isFinalSubmissionStatus(status: SubmissionStatus): boolean {
   return FINAL_SUBMISSION_STATUSES.includes(status);
 }
 
+/** Nur freigegebene (`APPROVED`) Einsendungen sind gewinnberechtigt. */
+export const WINNING_ELIGIBLE_SUBMISSION_STATUS: SubmissionStatus = SubmissionStatus.APPROVED;
+
+/** Quelle der Gewinnerentscheidung. */
+export const DecisionSource = {
+  CREATOR: 'CREATOR',
+  COMMUNITY_VOTE: 'COMMUNITY_VOTE',
+  AUTO_FALLBACK: 'AUTO_FALLBACK',
+} as const;
+export type DecisionSource = (typeof DecisionSource)[keyof typeof DecisionSource];
+
 type TransitionMatrix<S extends string> = Readonly<Record<S, readonly S[]>>;
 
 /** Erlaubte Statusübergänge einer Challenge (fokussierter Ausschnitt). */
@@ -79,7 +90,14 @@ export const CHALLENGE_TRANSITIONS: TransitionMatrix<ChallengeStatus> = {
   OPEN: [ChallengeStatus.FULL, ChallengeStatus.SUBMISSIONS_CLOSED, ChallengeStatus.CANCELLED, ChallengeStatus.EXPIRED],
   // FULL kann wieder zu OPEN werden, wenn ein Slot abläuft und Platz frei wird.
   FULL: [ChallengeStatus.OPEN, ChallengeStatus.SUBMISSIONS_CLOSED, ChallengeStatus.CANCELLED],
-  SUBMISSIONS_CLOSED: [ChallengeStatus.IN_REVIEW, ChallengeStatus.CANCELLED],
+  // WINNER_LOCKED ist aus SUBMISSIONS_CLOSED direkt erreichbar; SELECTION/IN_REVIEW
+  // bleiben als optionale Zwischenzustände erhalten.
+  SUBMISSIONS_CLOSED: [
+    ChallengeStatus.IN_REVIEW,
+    ChallengeStatus.SELECTION,
+    ChallengeStatus.WINNER_LOCKED,
+    ChallengeStatus.CANCELLED,
+  ],
   IN_REVIEW: [ChallengeStatus.SELECTION, ChallengeStatus.CANCELLED],
   SELECTION: [ChallengeStatus.WINNER_LOCKED, ChallengeStatus.CANCELLED],
   WINNER_LOCKED: [ChallengeStatus.PAID_OUT],

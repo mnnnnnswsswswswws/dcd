@@ -58,6 +58,34 @@ export const ERROR_CODES = {
     httpStatus: 409,
     message: 'Diese Aktion ist im aktuellen Zustand der Challenge nicht möglich.',
   },
+  NOT_ADMIN: {
+    httpStatus: 403,
+    message: 'Diese Aktion erfordert Admin-Rechte.',
+  },
+  NOT_A_PARTICIPANT: {
+    httpStatus: 403,
+    message: 'Du nimmst an dieser Challenge nicht teil.',
+  },
+  SUBMISSION_NOT_FOUND: {
+    httpStatus: 404,
+    message: 'Diese Einsendung existiert nicht.',
+  },
+  SUBMISSION_NOT_ELIGIBLE: {
+    httpStatus: 409,
+    message: 'Diese Einsendung ist nicht gewinnberechtigt.',
+  },
+  NO_ELIGIBLE_SUBMISSIONS: {
+    httpStatus: 409,
+    message: 'Es gibt keine gewinnberechtigte Einsendung.',
+  },
+  CREATOR_CANNOT_VOTE: {
+    httpStatus: 403,
+    message: 'Als Ersteller kannst du in deiner eigenen Challenge nicht abstimmen.',
+  },
+  ALREADY_VOTED: {
+    httpStatus: 409,
+    message: 'Du hast in dieser Challenge bereits abgestimmt.',
+  },
 } as const satisfies Record<string, ErrorSpec>;
 
 export type ErrorCode = keyof typeof ERROR_CODES;

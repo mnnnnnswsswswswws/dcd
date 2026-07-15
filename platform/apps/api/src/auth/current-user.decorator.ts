@@ -1,5 +1,5 @@
 import { createParamDecorator, type ExecutionContext } from '@nestjs/common';
-import type { AuthenticatedRequest } from './auth.guard.js';
+import type { AuthenticatedRequest, AuthenticatedUser } from './auth.guard.js';
 
 /** Extrahiert die authentifizierte User-ID aus dem Request (via AuthGuard gesetzt). */
 export const CurrentUserId = createParamDecorator(
@@ -10,5 +10,16 @@ export const CurrentUserId = createParamDecorator(
       throw new Error('CurrentUserId ohne AuthGuard verwendet.');
     }
     return id;
+  },
+);
+
+/** Extrahiert den vollständigen authentifizierten Nutzer (inkl. isAdmin). */
+export const CurrentUser = createParamDecorator(
+  (_data: unknown, context: ExecutionContext): AuthenticatedUser => {
+    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
+    if (request.user === undefined) {
+      throw new Error('CurrentUser ohne AuthGuard verwendet.');
+    }
+    return request.user;
   },
 );

@@ -66,6 +66,13 @@ enum LedgerDirection {
   CREDIT
 }
 
+enum PayoutStatus {
+  PENDING
+  HELD
+  PAID
+  FAILED
+}
+
 model User {
   id        String   @id @default(uuid()) @db.Uuid
   isAdult   Boolean  @default(false) @map("is_adult")
@@ -74,6 +81,7 @@ model User {
   createdChallenges Challenge[]  @relation("ChallengeCreator")
   slots             Slot[]
   submissions       Submission[]
+  votes             Vote[]
 
   @@map("users")
 }
@@ -92,8 +100,10 @@ model Challenge {
   creator     User             @relation("ChallengeCreator", fields: [creatorId], references: [id])
   slots       Slot[]
   submissions Submission[]
+  votes       Vote[]
   decision    WinnerDecision?
   funding     ChallengeFunding?
+  payout      Payout?
   ledger      LedgerEntry[]
 
   @@index([status])
@@ -160,11 +170,13 @@ model Submission {
   challengeId   String           @map("challenge_id") @db.Uuid
   participantId String           @map("participant_id") @db.Uuid
   status        SubmissionStatus @default(DRAFT)
+  finalizedAt   DateTime?        @map("finalized_at") @db.Timestamptz(6)
   createdAt     DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   challenge   Challenge @relation(fields: [challengeId], references: [id])
   participant User      @relation(fields: [participantId], references: [id])
+  votes       Vote[]
 
   // Eine gültige Einsendung pro Nutzer pro Challenge.
   @@unique([challengeId, participantId])
@@ -172,12 +184,45 @@ model Submission {
   @@map("submissions")
 }
 
+model Vote {
+  id           String   @id @default(uuid()) @db.Uuid
+  challengeId  String   @map("challenge_id") @db.Uuid
+  submissionId String   @map("submission_id") @db.Uuid
+  voterId      String   @map("voter_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  challenge  Challenge  @relation(fields: [challengeId], references: [id])
+  submission Submission @relation(fields: [submissionId], references: [id])
+  voter      User       @relation(fields: [voterId], references: [id])
+
+  // Eine Stimme pro Nutzer pro Challenge.
+  @@unique([challengeId, voterId])
+  @@index([submissionId])
+  @@map("votes")
+}
+
+model Payout {
+  id             String       @id @default(uuid()) @db.Uuid
+  challengeId    String       @unique @map("challenge_id") @db.Uuid
+  submissionId   String       @map("submission_id") @db.Uuid
+  amountCents    Int          @map("amount_cents")
+  status         PayoutStatus @default(PENDING)
+  idempotencyKey String       @unique @map("idempotency_key")
+  providerRef    String?      @map("provider_ref")
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  paidAt         DateTime?    @map("paid_at") @db.Timestamptz(6)
+
+  challenge Challenge @relation(fields: [challengeId], references: [id])
+
+  @@map("payouts")
+}
+
 model WinnerDecision {
-  id             String   @id @default(uuid()) @db.Uuid
-  challengeId    String   @unique @map("challenge_id") @db.Uuid
-  winnerSlotId   String?  @map("winner_slot_id") @db.Uuid
-  decisionSource String   @map("decision_source")
-  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id                 String   @id @default(uuid()) @db.Uuid
+  challengeId        String   @unique @map("challenge_id") @db.Uuid
+  winnerSubmissionId String?  @map("winner_submission_id") @db.Uuid
+  decisionSource     String   @map("decision_source")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   challenge Challenge @relation(fields: [challengeId], references: [id])
 

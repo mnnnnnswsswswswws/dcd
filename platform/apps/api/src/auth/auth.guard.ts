@@ -11,6 +11,7 @@ import { TOKEN_VERIFIER, type TokenVerifier } from './token-verifier.js';
 /** Nach erfolgreicher Verifikation an den Request gehängter, authentifizierter Nutzer. */
 export interface AuthenticatedUser {
   id: string;
+  isAdmin: boolean;
 }
 
 export interface AuthenticatedRequest extends Request {
@@ -34,8 +35,8 @@ export class AuthGuard implements CanActivate {
     }
 
     try {
-      const { userId } = await this.verifier.verify(token);
-      request.user = { id: userId };
+      const { userId, isAdmin } = await this.verifier.verify(token);
+      request.user = { id: userId, isAdmin };
       return true;
     } catch {
       throw new UnauthorizedException('Ungültiges Token.');

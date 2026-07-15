@@ -4,6 +4,7 @@ import { EventsModule } from './events/events.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { PaymentsModule } from './payments/payments.module.js';
 import { ChallengesModule } from './challenges/challenges.module.js';
+import { SubmissionsModule } from './submissions/submissions.module.js';
 import { WebhooksModule } from './webhooks/webhooks.module.js';
 import { HealthController } from './health/health.controller.js';
 
@@ -14,6 +15,7 @@ import { HealthController } from './health/health.controller.js';
     AuthModule,
     PaymentsModule,
     ChallengesModule,
+    SubmissionsModule,
     WebhooksModule,
   ],
   controllers: [HealthController],

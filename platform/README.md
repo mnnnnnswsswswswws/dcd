@@ -32,7 +32,13 @@ apps/
     src/app.module.ts                        # Wurzelmodul
     src/challenges/challenges.controller.ts  # POST /v1/challenges/:id/join, GET /v1/challenges/:id
     src/challenges/join-challenge.ts         # reine, transaktionssichere Slot-Reservierung
+    src/challenges/create-challenge.ts       # erstellen (PENDING_FUNDING) + Funding-Absicht
+    src/challenges/close-submissions.ts      # Einsendungsphase schließen
+    src/challenges/select-winner.ts          # Gewinnerauswahl (CREATOR/COMMUNITY/FALLBACK)
     src/challenges/join-challenge.handler.ts # framework-agnostischer HTTP-Adapter
+    src/submissions/*                        # submit / moderate / vote (+ Controller)
+    src/funding/confirm-funding.ts           # Webhook: Vollfinanzierung → OPEN
+    src/funding/process-payout.ts            # idempotente, flag-gesicherte Auszahlung
     src/auth/*                               # TokenVerifier (Mock/Firebase-Slot), AuthGuard
     src/prisma/*                             # PrismaService/-Module
     src/common/app-error.filter.ts           # AppError → einheitliche Fehlerantwort
@@ -70,13 +76,22 @@ NestJS-App (`apps/api`), die die reinen Kernfunktionen als Endpoints exponiert. 
 Controller ist ein dünner Wrapper um `joinChallenge`; ein globaler Filter mappt
 `AppError` auf `{ error: { code, message } }`.
 
-| Methode & Pfad                 | Auth    | Zweck                                                  |
-| ------------------------------ | ------- | ------------------------------------------------------ |
-| `POST /v1/challenges`          | Bearer  | Challenge erstellen (`PENDING_FUNDING`) + Funding-Absicht |
-| `POST /v1/challenges/:id/join` | Bearer  | Teilnehmerplatz reservieren (201, sonst 4xx-Code)      |
-| `GET  /v1/challenges/:id`      | —       | Öffentlicher Zustand inkl. belegter Plätze             |
-| `POST /v1/webhooks/payments`   | Secret  | Vollfinanzierung bestätigen → veröffentlichen (idempotent) |
-| `GET  /health`                 | —       | Liveness + DB-Erreichbarkeit                            |
+| Methode & Pfad                          | Auth    | Zweck                                                  |
+| --------------------------------------- | ------- | ------------------------------------------------------ |
+| `POST /v1/challenges`                   | Bearer  | Challenge erstellen (`PENDING_FUNDING`) + Funding-Absicht |
+| `POST /v1/challenges/:id/join`          | Bearer  | Teilnehmerplatz reservieren (201, sonst 4xx-Code)      |
+| `POST /v1/challenges/:id/submit`        | Bearer  | Einsendung abgeben (Stub)                               |
+| `POST /v1/challenges/:id/vote`          | Bearer  | Community-Stimme abgeben                                |
+| `POST /v1/submissions/:id/moderate`     | Admin   | Einsendung freigeben/ablehnen                           |
+| `POST /v1/challenges/:id/close`         | Admin   | Einsendungsphase schließen                              |
+| `POST /v1/challenges/:id/select-winner` | Bearer  | Gewinner wählen (Ersteller) / Fallback (Admin)          |
+| `POST /v1/challenges/:id/payout`        | Admin   | Idempotente Auszahlung (Geldfluss nur bei `PAYOUTS_ENABLED`) |
+| `GET  /v1/challenges/:id`               | —       | Öffentlicher Zustand inkl. belegter Plätze             |
+| `POST /v1/webhooks/payments`            | Secret  | Vollfinanzierung bestätigen → veröffentlichen (idempotent) |
+| `GET  /health`                          | —       | Liveness + DB-Erreichbarkeit                            |
+
+**Admin:** Im Mock-Verifier markiert das Token-Präfix `admin:` (z. B. `Bearer admin:<uuid>`)
+einen Admin — nur Entwicklung/Tests, ersetzt später Firebase-Claims.
 
 **Auth:** `AuthGuard` liest `Authorization: Bearer <token>` und verifiziert es über
 den `TokenVerifier`. Default ist der `MockTokenVerifier` (Token = User-ID, kein
@@ -113,6 +128,27 @@ Ledger ist per DB-Trigger (`prisma/sql/immutability.sql`) gegen UPDATE/DELETE
 gesperrt. Echtgeld bleibt deaktiviert: `createPaymentProvider` liefert den
 `MockPaymentProvider` und wirft hart, sobald `REAL_MONEY_ENABLED=true` ohne
 Live-Anbindung gesetzt wird.
+
+## Gewinnerauswahl & Auszahlung (Geld-raus-Loop)
+
+Nach dem Beitritt: `submit` (Einsendung, Stub) → optional `vote` → Admin `moderate`
+(nur `APPROVED` ist gewinnberechtigt) → Admin `close` (`SUBMISSIONS_CLOSED`) →
+`select-winner` → `payout`.
+
+`selectWinner` ist der Kern (Rules 4–7) und läuft **atomar** unter Row-Lock:
+
+- **Genau eine** Winner-Decision pro Challenge (`UNIQUE(challenge_id)`); erneuter
+  Aufruf ist idempotent, auch bei zwei parallelen Aufrufen entsteht nur eine.
+- Ablauf: prüfen → Decision → Submissions `WINNER`/`LOSER` → Challenge
+  `WINNER_LOCKED` → Payout-Datensatz → doppelte Ledger-Buchung (Escrow → Winner).
+- Quellen: `CREATOR_DECIDES` (Ersteller wählt eine `APPROVED`-Einsendung),
+  `COMMUNITY_VOTE` (höchster Score), `AUTO_FALLBACK` (Admin bei Ersteller-Untätigkeit:
+  höchster Community-Score, Tie-Break früheste `finalized_at`).
+
+`processPayout` ist idempotent und **flag-gesichert**: bei `PAYOUTS_ENABLED=false`
+wird der Payout nur auf `HELD` gesetzt (kein Geldfluss, Challenge bleibt
+`WINNER_LOCKED`); bei `true` wird er als `PAID` verbucht und die Challenge geht auf
+`PAID_OUT`.
 
 ## Slot-Expiration-Worker — Design
 
@@ -174,23 +210,24 @@ konsistent.
   Modelle + angrenzende Entitäten), nicht die vollständigen 31 Enums / 22 Modelle
   des Gesamtentwurfs.
 - **Verifiziert:** In der Build-Umgebung wurden `pnpm install`, `prisma db push`,
-  `tsc --noEmit` (alle Pakete) sowie die Tests tatsächlich ausgeführt — **39 Tests grün**:
+  `tsc --noEmit` (alle Pakete) sowie die Tests tatsächlich ausgeführt — **45 Tests grün**:
   - Unit (18) — contracts (2), domain (8), config (3), payments (5).
-  - Integration gegen lokales PostgreSQL 16 (11): Pflicht-Concurrency-Test
-    (50 parallele Joins → exakt 10), Expiration-Worker, sowie der volle
-    Finanzierungs-Lebenszyklus (create → confirm → join) inkl. Idempotenz,
-    doppelter Buchung und Ledger-Immutability (DB-Trigger lehnt UPDATE ab).
-  - HTTP-e2e (10): join/get/health + create→Webhook→join, 200/201/400/401/403/404/409.
-  - Live per `curl` geprüft: `POST /v1/challenges` (`PENDING_FUNDING`), Beitritt vor
-    Funding (409), Webhook falsch (401)/korrekt (veröffentlicht → `OPEN`), Beitritt
-    danach (201).
+  - Integration gegen lokales PostgreSQL 16 (16): Pflicht-Concurrency-Test
+    (50 parallele Joins → exakt 10), Expiration-Worker, Finanzierungs-Lebenszyklus
+    (create → confirm → join) inkl. Ledger-Immutability, sowie der Geld-raus-Loop
+    (submit → moderate → close → select → payout) mit allen drei Auswahlquellen,
+    Idempotenz, balancierter Payout-Buchung und paralleler Winner-Lock-Sicherheit.
+  - HTTP-e2e (11): join/get/health, create→Webhook→join, und der volle Geld-raus-Loop.
+  - Live per `curl` geprüft: kompletter Fluss create → Webhook → join → submit →
+    moderate → close → select-winner (`CREATOR`, → `WINNER_LOCKED`) → payout (`HELD`).
 
 ## Nächste Schritte
 
-1. Einsendungs-Pipeline (Capture-Sessions, Upload, Transcoding) — benötigt externe
-   Dienste (GCS/Transcoder); bis dahin sind Einsendungen nur als Datensatz modelliert.
-2. Gewinnerauswahl + idempotente Auszahlung (Winner-Lock, Ledger, Payout-Job,
-   Fallback-Worker) über den Mock-Provider — spiegelt die „Geld-raus"-Seite.
-3. `FirebaseTokenVerifier` (App Check + Firebase Auth) statt `MockTokenVerifier`;
+1. `FirebaseTokenVerifier` (App Check + Firebase Auth) statt `MockTokenVerifier`;
    Nutzer-Onboarding (18+-Gate) statt direktem Anlegen von User-Rows.
-4. Admin-Moderationsqueue, Discover, Social Feed (Phasen 1/6/7).
+2. Fristen-Worker: Challenges nach Ablauf automatisch `SUBMISSIONS_CLOSED` setzen und
+   den `AUTO_FALLBACK` bei Ersteller-Untätigkeit auslösen.
+3. Einsendungs-Pipeline (Capture-Sessions, Upload, Transcoding) — benötigt externe
+   Dienste (GCS/Transcoder); bis dahin sind Einsendungen nur als Datensatz modelliert.
+4. Stripe-Testmodus als echter `PaymentProvider` (Refund/Transfer, Webhook-Signatur);
+   Admin-Moderationsqueue, Discover, Social Feed (Phasen 1/5–7).

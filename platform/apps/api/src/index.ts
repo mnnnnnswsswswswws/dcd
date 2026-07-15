@@ -18,6 +18,14 @@ export type {
   ConfirmFundingInput,
   ConfirmFundingResult,
 } from './funding/confirm-funding.js';
+export { submitEntry } from './submissions/submit-entry.js';
+export { moderateSubmission } from './submissions/moderate-submission.js';
+export { castVote } from './submissions/cast-vote.js';
+export { closeSubmissions } from './challenges/close-submissions.js';
+export { selectWinner } from './challenges/select-winner.js';
+export type { SelectWinnerResult } from './challenges/select-winner.js';
+export { processPayout } from './funding/process-payout.js';
+export type { ProcessPayoutResult } from './funding/process-payout.js';
 export { expireSlots } from './workers/expire-slots.js';
 export type { ExpireSlotsDeps, ExpireSlotsResult } from './workers/expire-slots.js';
 export {

@@ -21,6 +21,8 @@ CREATE TYPE "FundingStatus" AS ENUM ('PENDING', 'CONFIRMED', 'FAILED', 'REFUNDED
 
 CREATE TYPE "LedgerDirection" AS ENUM ('DEBIT', 'CREDIT');
 
+CREATE TYPE "PayoutStatus" AS ENUM ('PENDING', 'HELD', 'PAID', 'FAILED');
+
 -- users -----------------------------------------------------------------------
 CREATE TABLE "users" (
   "id"         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -64,6 +66,7 @@ CREATE TABLE "submissions" (
   "challenge_id"   UUID NOT NULL REFERENCES "challenges"("id"),
   "participant_id" UUID NOT NULL REFERENCES "users"("id"),
   "status"         "SubmissionStatus" NOT NULL DEFAULT 'DRAFT',
+  "finalized_at"   TIMESTAMPTZ(6),
   "created_at"     TIMESTAMPTZ(6) NOT NULL DEFAULT now(),
   "updated_at"     TIMESTAMPTZ(6) NOT NULL DEFAULT now()
 );
@@ -72,13 +75,40 @@ CREATE UNIQUE INDEX "submissions_challenge_id_participant_id_key"
   ON "submissions" ("challenge_id", "participant_id");
 CREATE INDEX "submissions_challenge_id_status_idx" ON "submissions" ("challenge_id", "status");
 
--- winner_decisions ------------------------------------------------------------
-CREATE TABLE "winner_decisions" (
+-- votes -----------------------------------------------------------------------
+CREATE TABLE "votes" (
+  "id"            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "challenge_id"  UUID NOT NULL REFERENCES "challenges"("id"),
+  "submission_id" UUID NOT NULL REFERENCES "submissions"("id"),
+  "voter_id"      UUID NOT NULL REFERENCES "users"("id"),
+  "created_at"    TIMESTAMPTZ(6) NOT NULL DEFAULT now()
+);
+-- Eine Stimme pro Nutzer pro Challenge.
+CREATE UNIQUE INDEX "votes_challenge_id_voter_id_key" ON "votes" ("challenge_id", "voter_id");
+CREATE INDEX "votes_submission_id_idx" ON "votes" ("submission_id");
+
+-- payouts ---------------------------------------------------------------------
+CREATE TABLE "payouts" (
   "id"              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   "challenge_id"    UUID NOT NULL REFERENCES "challenges"("id"),
-  "winner_slot_id"  UUID,
-  "decision_source" TEXT NOT NULL,
-  "created_at"      TIMESTAMPTZ(6) NOT NULL DEFAULT now()
+  "submission_id"   UUID NOT NULL REFERENCES "submissions"("id"),
+  "amount_cents"    INTEGER NOT NULL,
+  "status"          "PayoutStatus" NOT NULL DEFAULT 'PENDING',
+  "idempotency_key" TEXT NOT NULL,
+  "provider_ref"    TEXT,
+  "created_at"      TIMESTAMPTZ(6) NOT NULL DEFAULT now(),
+  "paid_at"         TIMESTAMPTZ(6)
+);
+CREATE UNIQUE INDEX "payouts_challenge_id_key" ON "payouts" ("challenge_id");
+CREATE UNIQUE INDEX "payouts_idempotency_key_key" ON "payouts" ("idempotency_key");
+
+-- winner_decisions ------------------------------------------------------------
+CREATE TABLE "winner_decisions" (
+  "id"                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "challenge_id"         UUID NOT NULL REFERENCES "challenges"("id"),
+  "winner_submission_id" UUID,
+  "decision_source"      TEXT NOT NULL,
+  "created_at"           TIMESTAMPTZ(6) NOT NULL DEFAULT now()
 );
 -- Genau eine Winner-Decision pro Challenge.
 CREATE UNIQUE INDEX "winner_decisions_challenge_id_key"
