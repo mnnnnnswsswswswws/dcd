@@ -36,8 +36,9 @@ export default function HomePage() {
 
       {error && <p className="error">Fehler: {error}</p>}
 
-      <p>
+      <p className="row">
         <Link href="/create">+ Eigene Challenge erstellen</Link>
+        <Link href="/me">Meine Challenges</Link>
       </p>
 
       <h2 style={{ fontSize: '1.15rem' }}>Offene Challenges</h2>

@@ -53,4 +53,26 @@ describe('POST /v1/users', () => {
     // Ohne Auth → 401.
     await http().get('/v1/users/me').expect(401);
   });
+
+  it('listet erstellte und beigetretene Challenges', async () => {
+    const creator = await prisma.user.create({ data: { isAdult: true } });
+    const challenge = await prisma.challenge.create({
+      data: { creatorId: creator.id, status: 'OPEN', selectionMode: 'CREATOR_DECIDES', prizeAmountCents: 10_000, maxSlots: 10 },
+    });
+
+    // Ersteller sieht die Challenge unter "created".
+    const asCreator = await http().get('/v1/users/me/challenges').set('Authorization', `Bearer ${creator.id}`).expect(200);
+    expect(asCreator.body.created.some((c: { id: string }) => c.id === challenge.id)).toBe(true);
+    expect(asCreator.body.joined).toHaveLength(0);
+
+    // Teilnehmer mit Slot sieht sie unter "joined" inkl. Slot-Status.
+    const participant = await prisma.user.create({ data: { isAdult: true } });
+    await prisma.slot.create({ data: { challengeId: challenge.id, participantId: participant.id, status: 'RESERVED' } });
+    const asParticipant = await http().get('/v1/users/me/challenges').set('Authorization', `Bearer ${participant.id}`).expect(200);
+    expect(asParticipant.body.joined).toHaveLength(1);
+    expect(asParticipant.body.joined[0].slotStatus).toBe('RESERVED');
+    expect(asParticipant.body.created).toHaveLength(0);
+
+    await http().get('/v1/users/me/challenges').expect(401);
+  });
 });

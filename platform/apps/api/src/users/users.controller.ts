@@ -47,4 +47,34 @@ export class UsersController {
     }
     return user;
   }
+
+  /** Challenges des Nutzers: selbst erstellt und beigetreten (inkl. Slot-Status). */
+  @Get('me/challenges')
+  @UseGuards(AuthGuard)
+  async myChallenges(@CurrentUserId() userId: string) {
+    const summary = {
+      id: true,
+      status: true,
+      selectionMode: true,
+      prizeAmountCents: true,
+      maxSlots: true,
+      submissionDeadline: true,
+      createdAt: true,
+    } as const;
+
+    const created = await this.prisma.challenge.findMany({
+      where: { creatorId: userId },
+      orderBy: { createdAt: 'desc' },
+      select: summary,
+    });
+
+    const slots = await this.prisma.slot.findMany({
+      where: { participantId: userId },
+      orderBy: { createdAt: 'desc' },
+      select: { status: true, challenge: { select: summary } },
+    });
+    const joined = slots.map((s) => ({ ...s.challenge, slotStatus: s.status }));
+
+    return { created, joined };
+  }
 }

@@ -80,6 +80,7 @@ Controller ist ein dünner Wrapper um `joinChallenge`; ein globaler Filter mappt
 | --------------------------------------- | ------- | ------------------------------------------------------ |
 | `POST /v1/users`                        | —       | Registrierung (18+-Gate); ID dient als Bearer-Token     |
 | `GET  /v1/users/me`                     | Bearer  | Eigenes Profil                                          |
+| `GET  /v1/users/me/challenges`          | Bearer  | Eigene erstellte + beigetretene Challenges              |
 | `POST /v1/challenges`                   | Bearer  | Challenge erstellen (`PENDING_FUNDING`) + Funding-Absicht |
 | `POST /v1/challenges/:id/join`          | Bearer  | Teilnehmerplatz reservieren (201, sonst 4xx-Code)      |
 | `POST /v1/challenges/:id/submit`        | Bearer  | Einsendung abgeben (Stub)                               |
