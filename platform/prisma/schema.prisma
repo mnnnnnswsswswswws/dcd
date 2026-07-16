@@ -128,6 +128,26 @@ model ChallengeFunding {
   @@map("challenge_fundings")
 }
 
+/// Revisionssicheres Audit-Log kritischer Zustandsänderungen (Geld, Gewinner, Status).
+/// Append-only: Updates/Deletes werden per DB-Trigger hart abgelehnt (siehe
+/// prisma/sql/immutability.sql). Einträge werden innerhalb der jeweiligen Transaktion
+/// geschrieben, sind also atomar mit der Zustandsänderung.
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorType  String   @map("actor_type") // USER | ADMIN | SYSTEM
+  actorId    String?  @map("actor_id") @db.Uuid
+  action     String
+  targetType String   @map("target_type")
+  targetId   String   @map("target_id") @db.Uuid
+  beforeJson Json?    @map("before_json")
+  afterJson  Json?    @map("after_json")
+  requestId  String?  @map("request_id")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([targetType, targetId])
+  @@map("audit_logs")
+}
+
 /// Unveränderliche, doppelte Buchführung. Updates/Deletes werden per DB-Trigger
 /// (prisma/sql/immutability.sql) hart abgelehnt; die App schreibt ausschließlich neu.
 model LedgerEntry {

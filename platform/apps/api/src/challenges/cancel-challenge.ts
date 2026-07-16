@@ -2,6 +2,7 @@ import { Prisma, PrismaClient, type ChallengeStatus, type SlotStatus } from '@pr
 import { apiError } from '@vcp/contracts';
 import { COUNTING_SLOT_STATUSES, canTransitionChallenge } from '@vcp/domain';
 import type { EventPublisher } from '../events/event-publisher.js';
+import { writeAudit } from '../audit/write-audit.js';
 
 const COUNTING: SlotStatus[] = COUNTING_SLOT_STATUSES as unknown as SlotStatus[];
 const TRANSACTION_TIMEOUT_MS = 20_000;
@@ -109,6 +110,17 @@ export async function cancelChallenge(
       }
 
       await tx.challenge.update({ where: { id: challengeId }, data: { status: 'CANCELLED' } });
+
+      await writeAudit(tx, {
+        actorType: isAdmin ? 'ADMIN' : 'USER',
+        actorId,
+        action: 'challenge.cancelled',
+        targetType: 'challenge',
+        targetId: challengeId,
+        before: { status: challenge.status },
+        after: { status: 'CANCELLED', refunded },
+      });
+
       return { refunded, alreadyCancelled: false };
     },
     {

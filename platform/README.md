@@ -1,12 +1,58 @@
 # Video-Challenge-Plattform
 
 Bezahlte Video-Challenge-Plattform, mobile-first. Startmarkt Deutschland, EUR,
-ausschließlich 18+. Dieses Verzeichnis enthält den **fokussierten Phase-0-Kern**
-plus die aktive Aufgabe **`joinChallenge`** (transaktionssichere Slot-Reservierung).
+ausschließlich 18+. Umsetzung nach dem verbindlichen Build-Auftrag
+`FABLE_CLOUD_START_HERE_Challenge_Platform.md`.
 
 > Code und Identifier sind Englisch; alle nutzersichtbaren Texte und Fehlermeldungen
 > sind Deutsch. Geldbeträge ausschließlich als Integer in Cent. Timestamps in UTC,
 > IDs als UUID. Alle Feature-Flags default `false`.
+
+## Umsetzungsstand gegenüber der Spezifikation
+
+Der **fachliche Kern-Loop** und alle **nicht verhandelbaren Produktregeln** sind
+umgesetzt und getestet; das Gesamtdokument ist breiter (volle Video-Pipeline,
+Mobile-App, Firebase-Live etc.). Ehrliche Einordnung:
+
+**Nicht verhandelbare Regeln — umgesetzt & getestet:**
+max. 10 zählende Plätze (transaktionssicher, `FOR UPDATE`, 50-parallel-Test → exakt 10);
+Veröffentlichung nur nach bestätigter Vollfinanzierung (Webhook als einzige Quelle);
+genau ein vorab fixierter Auswahlmodus; eine Einsendung pro Nutzer; Ersteller kann nicht
+gewinnen/abstimmen; unveränderliche Winner-Decision (`UNIQUE(challenge_id)`, atomar,
+parallel-sicher) **+ revisionssicheres `audit_logs` (append-only per DB-Trigger)**;
+idempotente Zahlung/Auszahlung/Erstattung mit doppelter, unveränderlicher Buchführung;
+`AUTO_FALLBACK` bei Ersteller-Untätigkeit (höchster Score, Tie-Break früheste
+`finalized_at`); Moderationsfreigabe (`APPROVED`) als Gewinn-/Veröffentlichungs­bedingung;
+keine Echtgeld-Produktion, solange Flags `false` (Factory wirft hart).
+
+**Phase 0 (10-Punkte-Auftrag) — Status:**
+
+| # | Punkt | Status |
+|---|-------|--------|
+| 1 | Monorepo (pnpm + Turborepo) | ✅ |
+| 2 | apps: api / admin-web / workers / mobile | ⚠️ api+admin+web ✅, Worker als Runner in `apps/api` (noch nicht `apps/workers`), **mobile (Expo) fehlt** |
+| 3 | TypeScript, Tests, Env-Validierung / Linting | ✅ TS/Tests/Zod-Env; ⚠️ **ESLint fehlt** |
+| 4 | Vollständiges Prisma-Modell + erste Migration | ⚠️ Kernmodelle + `audit_logs`/`ledger_entries`/`votes`/`payouts`; **fehlend:** profiles, criteria, capture_sessions, media_assets, transfers, connected_accounts, reports, moderation_cases, comments/likes/follows, notifications |
+| 5 | Firebase-Auth + App-Check | ⚠️ `FirebaseTokenVerifier` (Mock-Default) vorhanden; **App-Check fehlt** |
+| 6 | Challenge-State-Machine | ✅ (Status-Namen weichen vom Dokument ab — s. offene Punkte) |
+| 7 | Transaktionssichere `join`-Logik | ✅ |
+| 8 | 50-Nutzer-Concurrency-Test → exakt 10 | ✅ grün |
+| 9 | Mock-Payment-Provider | ✅ (+ Stripe-Provider-Code, per Env wählbar) |
+| 10 | README-Dokumentation | ✅ (dieses Dokument) |
+
+**Offene Punkte / bewusste Abweichungen:**
+- Status-Namen weichen vom Dokument ab (z. B. `PENDING_FUNDING`/`OPEN`/`WINNER_LOCKED`
+  vs. `PAYMENT_PENDING`/`FUNDED`/`JUDGING`/`VOTING`). Regeln/Verhalten identisch;
+  Umbenennung ist ein reines Refactoring (auf Wunsch angleichbar).
+- Video-Beweis-Pipeline (Capture Sessions, Overlay, Hash-Kette, Transcoding),
+  Mobile-App, echtes Firebase/App-Check und Stripe-Live erfordern externe Dienste/
+  Credentials — bewusst hinter Interfaces/Flags vorbereitet, aber nicht live.
+- Weitere Spec-Tabellen (Social/Moderation/Payments-Detail) sind noch nicht angelegt.
+
+**Testresultate (in dieser Umgebung real ausgeführt, gegen migrierte PostgreSQL 16):**
+Unit + Integration + e2e grün; Pflicht-Concurrency-Test (50→10), Gewinner-Race
+(genau eine Decision), Webhook-Idempotenz, Cancel/Refund, Deadline-/Expiration-Worker,
+Ledger- und Audit-Immutability. CI (GitHub Actions) grün.
 
 ## Stack
 

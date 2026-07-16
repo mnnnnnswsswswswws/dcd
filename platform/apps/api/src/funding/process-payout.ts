@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Prisma, PrismaClient, type ChallengeStatus } from '@prisma/client';
 import { apiError } from '@vcp/contracts';
 import type { EventPublisher } from '../events/event-publisher.js';
+import { writeAudit } from '../audit/write-audit.js';
 
 const TRANSACTION_TIMEOUT_MS = 20_000;
 
@@ -79,6 +80,16 @@ export async function processPayout(
         data: { status: 'PAID', paidAt: now, providerRef: `po_${randomUUID()}` },
       });
       await tx.challenge.update({ where: { id: challengeId }, data: { status: 'PAID_OUT' } });
+
+      await writeAudit(tx, {
+        actorType: 'ADMIN',
+        action: 'challenge.paid_out',
+        targetType: 'challenge',
+        targetId: challengeId,
+        before: { status: 'WINNER_LOCKED' },
+        after: { status: 'PAID_OUT', payoutId: payout.id },
+      });
+
       return { status: 'PAID' as const, paid: true, alreadyPaid: false };
     },
     {

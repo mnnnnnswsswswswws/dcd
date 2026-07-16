@@ -102,6 +102,11 @@ describe('Geld-raus-Loop', () => {
     expect((await prisma.challenge.findUniqueOrThrow({ where: { id: challengeId } })).status).toBe('PAID_OUT');
     const again = await processPayout(deps, { challengeId, isAdmin: true, payoutsEnabled: true });
     expect(again).toMatchObject({ alreadyPaid: true });
+
+    // Audit-Log: Winner-Lock und Auszahlung revisionssicher protokolliert.
+    const actions = (await prisma.auditLog.findMany({ where: { targetId: challengeId } })).map((a) => a.action);
+    expect(actions).toContain('challenge.winner_locked');
+    expect(actions).toContain('challenge.paid_out');
   });
 
   it('COMMUNITY_VOTE: höchster Score gewinnt', async () => {

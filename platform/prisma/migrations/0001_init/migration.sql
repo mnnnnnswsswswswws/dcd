@@ -132,6 +132,21 @@ CREATE UNIQUE INDEX "challenge_fundings_provider_ref_key" ON "challenge_fundings
 CREATE UNIQUE INDEX "challenge_fundings_idempotency_key_key" ON "challenge_fundings" ("idempotency_key");
 CREATE INDEX "challenge_fundings_status_idx" ON "challenge_fundings" ("status");
 
+-- audit_logs (append-only, siehe Trigger unten) -------------------------------
+CREATE TABLE "audit_logs" (
+  "id"          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "actor_type"  TEXT NOT NULL,
+  "actor_id"    UUID,
+  "action"      TEXT NOT NULL,
+  "target_type" TEXT NOT NULL,
+  "target_id"   UUID NOT NULL,
+  "before_json" JSONB,
+  "after_json"  JSONB,
+  "request_id"  TEXT,
+  "created_at"  TIMESTAMPTZ(6) NOT NULL DEFAULT now()
+);
+CREATE INDEX "audit_logs_target_type_target_id_idx" ON "audit_logs" ("target_type", "target_id");
+
 -- ledger_entries (append-only, siehe Trigger unten) ---------------------------
 CREATE TABLE "ledger_entries" (
   "id"           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -159,3 +174,18 @@ CREATE TRIGGER ledger_entries_no_update
 CREATE TRIGGER ledger_entries_no_delete
   BEFORE DELETE ON ledger_entries
   FOR EACH ROW EXECUTE FUNCTION reject_ledger_mutation();
+
+-- Unveränderlichkeit der Audit-Logs erzwingen.
+CREATE OR REPLACE FUNCTION reject_audit_mutation() RETURNS trigger AS $$
+BEGIN
+  RAISE EXCEPTION 'audit_logs ist unveränderlich (append-only)';
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER audit_logs_no_update
+  BEFORE UPDATE ON audit_logs
+  FOR EACH ROW EXECUTE FUNCTION reject_audit_mutation();
+
+CREATE TRIGGER audit_logs_no_delete
+  BEFORE DELETE ON audit_logs
+  FOR EACH ROW EXECUTE FUNCTION reject_audit_mutation();

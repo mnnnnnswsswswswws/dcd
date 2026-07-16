@@ -2,6 +2,7 @@ import { Prisma, PrismaClient, type ChallengeStatus } from '@prisma/client';
 import { apiError } from '@vcp/contracts';
 import { canTransitionChallenge } from '@vcp/domain';
 import type { EventPublisher } from '../events/event-publisher.js';
+import { writeAudit } from '../audit/write-audit.js';
 
 const TRANSACTION_TIMEOUT_MS = 20_000;
 
@@ -107,6 +108,15 @@ export async function confirmFunding(
       await tx.challenge.update({
         where: { id: funding.challengeId },
         data: { status: 'OPEN' },
+      });
+
+      await writeAudit(tx, {
+        actorType: 'SYSTEM',
+        action: 'challenge.funded',
+        targetType: 'challenge',
+        targetId: funding.challengeId,
+        before: { status: challenge.status },
+        after: { status: 'OPEN', fundingId: funding.id },
       });
 
       return { challengeId: funding.challengeId, published: true, alreadyConfirmed: false };

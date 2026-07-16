@@ -2,6 +2,7 @@ import { Prisma, PrismaClient, type ChallengeStatus, type SelectionMode } from '
 import { apiError } from '@vcp/contracts';
 import { DecisionSource, canTransitionChallenge } from '@vcp/domain';
 import type { EventPublisher } from '../events/event-publisher.js';
+import { writeAudit } from '../audit/write-audit.js';
 
 const TRANSACTION_TIMEOUT_MS = 20_000;
 const ACCOUNT_ESCROW = 'CHALLENGE_ESCROW';
@@ -168,6 +169,16 @@ export async function selectWinner(
       });
 
       await tx.challenge.update({ where: { id: challengeId }, data: { status: 'WINNER_LOCKED' } });
+
+      await writeAudit(tx, {
+        actorType: isAdmin ? 'ADMIN' : 'USER',
+        actorId,
+        action: 'challenge.winner_locked',
+        targetType: 'challenge',
+        targetId: challengeId,
+        before: { status: challenge.status },
+        after: { status: 'WINNER_LOCKED', winnerSubmissionId: winnerId, decisionSource },
+      });
 
       return { challengeId, winnerSubmissionId: winnerId, decisionSource, alreadyDecided: false };
     },
