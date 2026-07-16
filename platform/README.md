@@ -230,6 +230,20 @@ Seiten: Dashboard mit Status-gefilterter Challenge-Liste (`GET /v1/challenges`) 
 eine Detailseite mit Einsendungen (`GET /v1/challenges/:id/submissions`) samt
 Freigeben/Ablehnen, Einsendeschluss, Gewinnerwahl, Auszahlung und Abbruch.
 
+## Web-Frontend (`apps/web`)
+
+Öffentliche Besucher-/Teilnehmer-Oberfläche (Next.js 14). Registrieren mit 18+-Gate
+(die zurückgegebene ID dient als Bearer-Token), offene Challenges + Feed durchstöbern,
+einer Challenge beitreten, Einsendung abgeben und für Einsendungen abstimmen.
+
+```sh
+pnpm --filter @vcp/web dev       # http://localhost:3001
+pnpm --filter @vcp/web build     # Produktions-Build
+```
+
+Beide Frontends sprechen ausschließlich die API; ihre Origins müssen in `CORS_ORIGINS`
+freigegeben sein (lokal z. B. `http://localhost:3000,http://localhost:3001`).
+
 ## Provider-Auswahl (Auth & Payments)
 
 Auth und Zahlungen laufen hinter austauschbaren Interfaces; die Auswahl steuert das

@@ -12,8 +12,8 @@ x-app-env: &app-env
   # (dann wird ein echtes, nicht-Default WEBHOOK_SECRET erzwungen).
   NODE_ENV: "development"
   WEBHOOK_SECRET: "change-me-in-production"
-  # Erlaubte CORS-Origins (z. B. die Admin-UI). Kommagetrennt oder * für alle.
-  CORS_ORIGINS: "http://localhost:3000"
+  # Erlaubte CORS-Origins (Admin-UI + Web-Frontend). Kommagetrennt oder * für alle.
+  CORS_ORIGINS: "http://localhost:3000,http://localhost:3001"
 
 services:
   postgres:
