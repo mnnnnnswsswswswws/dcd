@@ -8,9 +8,12 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import type { PaymentProvider } from '@vcp/payments';
+import { ChallengeStatus } from '@vcp/domain';
+import { apiError } from '@vcp/contracts';
 import { loadEnv } from '@vcp/config';
 import type { EventPublisher } from '../events/event-publisher.js';
 import { EVENT_PUBLISHER } from '../events/events.module.js';
@@ -59,6 +62,47 @@ export class ChallengesController {
       { prisma: this.prisma, payments: this.payments, events: this.events },
       { ...body, creatorId: userId },
     );
+  }
+
+  /** Öffentliche Liste von Challenges, optional nach Status gefiltert (Discover/Admin). */
+  @Get()
+  async list(@Query('status') status?: string, @Query('limit') limit?: string) {
+    if (status !== undefined && !(status in ChallengeStatus)) {
+      throw apiError('INVALID_INPUT');
+    }
+    const take = Math.min(Math.max(Number(limit) || 50, 1), 100);
+    return this.prisma.challenge.findMany({
+      where: status !== undefined ? { status: status as (typeof ChallengeStatus)[keyof typeof ChallengeStatus] } : {},
+      orderBy: { createdAt: 'desc' },
+      take,
+      select: {
+        id: true,
+        status: true,
+        selectionMode: true,
+        prizeAmountCents: true,
+        maxSlots: true,
+        submissionDeadline: true,
+        createdAt: true,
+      },
+    });
+  }
+
+  /** Einsendungen einer Challenge inkl. Stimmenzahl (für die Moderations-/Auswahlansicht). */
+  @Get(':id/submissions')
+  @UseGuards(AuthGuard)
+  async submissions(@Param('id', new ParseUUIDPipe()) id: string) {
+    const subs = await this.prisma.submission.findMany({
+      where: { challengeId: id },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true, participantId: true, status: true, finalizedAt: true, createdAt: true },
+    });
+    const counts = await this.prisma.vote.groupBy({
+      by: ['submissionId'],
+      where: { challengeId: id },
+      _count: { _all: true },
+    });
+    const countById = new Map(counts.map((c) => [c.submissionId, c._count._all]));
+    return subs.map((s) => ({ ...s, voteCount: countById.get(s.id) ?? 0 }));
   }
 
   /** Öffentliche Leseansicht einer Challenge (Zustand einsehen). */

@@ -240,6 +240,43 @@ describe('POST /v1/challenges/:id/cancel', () => {
   });
 });
 
+describe('Read-Endpoints (Discover/Admin)', () => {
+  it('listet Challenges und filtert nach Status', async () => {
+    const creator = await prisma.user.create({ data: { isAdult: true } });
+    const create = await request(app.getHttpServer())
+      .post('/v1/challenges')
+      .set('Authorization', `Bearer ${creator.id}`)
+      .send({ selectionMode: 'CREATOR_DECIDES', prizeAmountCents: 10_000, submissionDeadline: new Date(Date.now() + 3_600_000).toISOString() })
+      .expect(201);
+    const id = create.body.challenge.id as string;
+
+    const all = await request(app.getHttpServer()).get('/v1/challenges').expect(200);
+    expect(all.body.some((c: { id: string }) => c.id === id)).toBe(true);
+
+    const filtered = await request(app.getHttpServer()).get('/v1/challenges?status=PENDING_FUNDING').expect(200);
+    expect(filtered.body.every((c: { status: string }) => c.status === 'PENDING_FUNDING')).toBe(true);
+
+    await request(app.getHttpServer()).get('/v1/challenges?status=NOPE').expect(400);
+  });
+
+  it('liefert Einsendungen einer Challenge (Auth erforderlich)', async () => {
+    const creator = await prisma.user.create({ data: { isAdult: true } });
+    const create = await request(app.getHttpServer())
+      .post('/v1/challenges')
+      .set('Authorization', `Bearer ${creator.id}`)
+      .send({ selectionMode: 'CREATOR_DECIDES', prizeAmountCents: 10_000, submissionDeadline: new Date(Date.now() + 3_600_000).toISOString() })
+      .expect(201);
+    const id = create.body.challenge.id as string;
+
+    await request(app.getHttpServer()).get(`/v1/challenges/${id}/submissions`).expect(401);
+    const res = await request(app.getHttpServer())
+      .get(`/v1/challenges/${id}/submissions`)
+      .set('Authorization', `Bearer ${creator.id}`)
+      .expect(200);
+    expect(Array.isArray(res.body)).toBe(true);
+  });
+});
+
 describe('GET /health', () => {
   it('meldet ok und DB up', async () => {
     const res = await request(app.getHttpServer()).get('/health').expect(200);

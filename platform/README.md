@@ -89,8 +89,10 @@ Controller ist ein dünner Wrapper um `joinChallenge`; ein globaler Filter mappt
 | `POST /v1/challenges/:id/select-winner` | Bearer  | Gewinner wählen (Ersteller) / Fallback (Admin)          |
 | `POST /v1/challenges/:id/cancel`        | Bearer  | Abbrechen (+ idempotente Erstattung, falls finanziert)  |
 | `POST /v1/challenges/:id/payout`        | Admin   | Idempotente Auszahlung (Geldfluss nur bei `PAYOUTS_ENABLED`) |
+| `GET  /v1/challenges`                   | —       | Liste (optional `?status=`), für Discover/Admin         |
 | `GET  /v1/challenges/:id`               | —       | Öffentlicher Zustand inkl. belegter Plätze             |
-| `POST /v1/webhooks/payments`            | Secret  | Vollfinanzierung bestätigen → veröffentlichen (idempotent) |
+| `GET  /v1/challenges/:id/submissions`   | Bearer  | Einsendungen + Stimmenzahl (Moderation/Auswahl)         |
+| `POST /v1/webhooks/payments`            | Secret/Sig | Vollfinanzierung bestätigen → veröffentlichen (idempotent) |
 | `GET  /health`                          | —       | Liveness + DB-Erreichbarkeit                            |
 
 **Admin:** Im Mock-Verifier markiert das Token-Präfix `admin:` (z. B. `Bearer admin:<uuid>`)
@@ -211,6 +213,37 @@ Der Integrationstest (`apps/api/test/join-challenge.integration.test.ts`) belegt
 50 parallele authentifizierte Join-Requests → **exakt 10 Erfolge**, **40 ×
 `CHALLENGE_FULL`**, keine doppelte Reservierung, Challenge-Status `FULL`, Daten
 konsistent.
+
+## Admin-UI (`apps/admin`)
+
+Next.js-14-Oberfläche (App Router) für Moderation, Gewinnerauswahl, Auszahlung und
+Abbruch. Sie spricht ausschließlich die API — API-Basis-URL und Admin-Token
+(`admin:<uuid>` im Mock-Setup) werden in der Oberfläche hinterlegt (localStorage).
+
+```sh
+pnpm --filter @vcp/admin dev     # http://localhost:3000
+pnpm --filter @vcp/admin build   # Produktions-Build
+```
+
+Seiten: Dashboard mit Status-gefilterter Challenge-Liste (`GET /v1/challenges`) und
+eine Detailseite mit Einsendungen (`GET /v1/challenges/:id/submissions`) samt
+Freigeben/Ablehnen, Einsendeschluss, Gewinnerwahl, Auszahlung und Abbruch.
+
+## Provider-Auswahl (Auth & Payments)
+
+Auth und Zahlungen laufen hinter austauschbaren Interfaces; die Auswahl steuert das
+Env, Default ist jeweils der Mock (kein Netzwerk/keine Credentials):
+
+- `AUTH_PROVIDER=mock|firebase` — `firebase` bindet `FirebaseTokenVerifier`
+  (`firebase-admin`, ADC via `GOOGLE_APPLICATION_CREDENTIALS`, Admin über Custom-Claim
+  `admin`) und braucht `FIREBASE_PROJECT_ID`.
+- `PAYMENTS_PROVIDER=mock|stripe` — `stripe` bindet `StripePaymentProvider`
+  (PaymentIntents, idempotent) und `StripeWebhookVerifier` (Signaturprüfung über den
+  Raw-Body) und braucht `STRIPE_SECRET_KEY` (+ `STRIPE_WEBHOOK_SECRET` für Webhooks).
+
+Beide echten Provider laden ihre SDKs **lazy** — Mock-Betrieb und Tests brauchen sie
+nicht. Live-Betrieb erfordert nur, die jeweiligen Secrets als Umgebungsvariablen zu
+hinterlegen.
 
 ## Deployment
 
