@@ -74,7 +74,8 @@ derselben Challenge und garantiert das harte Limit von 10 Plätzen.
 
 NestJS-App (`apps/api`), die die reinen Kernfunktionen als Endpoints exponiert. Der
 Controller ist ein dünner Wrapper um `joinChallenge`; ein globaler Filter mappt
-`AppError` auf `{ error: { code, message } }`.
+`AppError` auf `{ error: { code, message } }`. Eine vollständige, importierbare
+OpenAPI-3.1-Spezifikation liegt unter [`docs/openapi.yaml`](docs/openapi.yaml).
 
 | Methode & Pfad                          | Auth    | Zweck                                                  |
 | --------------------------------------- | ------- | ------------------------------------------------------ |
