@@ -26,6 +26,7 @@ import {
 } from './create-challenge.js';
 import { closeSubmissions } from './close-submissions.js';
 import { selectWinner } from './select-winner.js';
+import { cancelChallenge } from './cancel-challenge.js';
 import { submitEntry } from '../submissions/submit-entry.js';
 import { castVote } from '../submissions/cast-vote.js';
 import { processPayout } from '../funding/process-payout.js';
@@ -145,6 +146,14 @@ export class ChallengesController {
       isAdmin: user.isAdmin,
       winnerSubmissionId: body.winnerSubmissionId,
     });
+  }
+
+  /** Bricht die Challenge ab und erstattet ggf. die Preissumme (Ersteller oder Admin). */
+  @Post(':id/cancel')
+  @HttpCode(200)
+  @UseGuards(AuthGuard)
+  async cancel(@Param('id', new ParseUUIDPipe()) id: string, @CurrentUser() user: AuthenticatedUser) {
+    return cancelChallenge(this.deps, { challengeId: id, actorId: user.id, isAdmin: user.isAdmin });
   }
 
   /** Führt die idempotente Auszahlung aus (Admin; Geldfluss nur bei PAYOUTS_ENABLED). */

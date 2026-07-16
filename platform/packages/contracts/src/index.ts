@@ -94,6 +94,10 @@ export const ERROR_CODES = {
     httpStatus: 404,
     message: 'Dieser Nutzer existiert nicht.',
   },
+  FORBIDDEN: {
+    httpStatus: 403,
+    message: 'Diese Aktion ist dir nicht gestattet.',
+  },
 } as const satisfies Record<string, ErrorSpec>;
 
 export type ErrorCode = keyof typeof ERROR_CODES;

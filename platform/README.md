@@ -87,6 +87,7 @@ Controller ist ein dünner Wrapper um `joinChallenge`; ein globaler Filter mappt
 | `POST /v1/submissions/:id/moderate`     | Admin   | Einsendung freigeben/ablehnen                           |
 | `POST /v1/challenges/:id/close`         | Admin   | Einsendungsphase schließen                              |
 | `POST /v1/challenges/:id/select-winner` | Bearer  | Gewinner wählen (Ersteller) / Fallback (Admin)          |
+| `POST /v1/challenges/:id/cancel`        | Bearer  | Abbrechen (+ idempotente Erstattung, falls finanziert)  |
 | `POST /v1/challenges/:id/payout`        | Admin   | Idempotente Auszahlung (Geldfluss nur bei `PAYOUTS_ENABLED`) |
 | `GET  /v1/challenges/:id`               | —       | Öffentlicher Zustand inkl. belegter Plätze             |
 | `POST /v1/webhooks/payments`            | Secret  | Vollfinanzierung bestätigen → veröffentlichen (idempotent) |
@@ -151,6 +152,11 @@ Nach dem Beitritt: `submit` (Einsendung, Stub) → optional `vote` → Admin `mo
 wird der Payout nur auf `HELD` gesetzt (kein Geldfluss, Challenge bleibt
 `WINNER_LOCKED`); bei `true` wird er als `PAID` verbucht und die Challenge geht auf
 `PAID_OUT`.
+
+`cancelChallenge` schließt die Gegenrichtung des Geldflusses: ein Abbruch vor
+Einsendeschluss (Ersteller oder Admin) setzt die Challenge auf `CANCELLED`, gibt
+zählende Slots frei und erstattet — falls bereits vollfinanziert — die Preissumme
+idempotent per doppelter Ledger-Rückbuchung (`funding.status = REFUNDED`).
 
 ## Slot-Expiration-Worker — Design
 
@@ -225,15 +231,15 @@ Details und eine Cloud-Run-Skizze: [`docs/DEPLOY.md`](docs/DEPLOY.md).
   Modelle + angrenzende Entitäten), nicht die vollständigen 31 Enums / 22 Modelle
   des Gesamtentwurfs.
 - **Verifiziert:** In der Build-Umgebung wurden `pnpm install`, `prisma db push`,
-  `tsc --noEmit` (alle Pakete) sowie die Tests tatsächlich ausgeführt — **50 Tests grün**:
+  `tsc --noEmit` (alle Pakete) sowie die Tests tatsächlich ausgeführt — **56 Tests grün**:
   - Unit (18) — contracts (2), domain (8), config (3), payments (5).
-  - Integration gegen lokales PostgreSQL 16 (18): Pflicht-Concurrency-Test
+  - Integration gegen lokales PostgreSQL 16 (22): Pflicht-Concurrency-Test
     (50 parallele Joins → exakt 10), Expiration- und Fristen-Worker,
-    Finanzierungs-Lebenszyklus inkl. Ledger-Immutability, sowie der Geld-raus-Loop
-    (submit → moderate → close → select → payout) mit allen drei Auswahlquellen,
-    Idempotenz, balancierter Payout-Buchung und paralleler Winner-Lock-Sicherheit.
-  - HTTP-e2e (14): Onboarding (18+-Gate), join/get/health, create→Webhook→join,
-    und der volle Geld-raus-Loop.
+    Finanzierungs-Lebenszyklus inkl. Ledger-Immutability, der Geld-raus-Loop
+    (submit → moderate → close → select → payout) mit allen drei Auswahlquellen und
+    paralleler Winner-Lock-Sicherheit, sowie Abbruch + idempotente Erstattung.
+  - HTTP-e2e (16): Onboarding (18+-Gate), join/get/health, create→Webhook→join,
+    der volle Geld-raus-Loop und Abbruch.
   - Live per `curl` geprüft: **voll self-serve ohne DB-Seeding** — Nutzer registrieren
     → erstellen → Webhook-Funding → beitreten; sowie der komplette Geld-raus-Loop bis
     `WINNER_LOCKED` und zurückgehaltener Auszahlung.

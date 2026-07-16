@@ -26,6 +26,8 @@ export { selectWinner } from './challenges/select-winner.js';
 export type { SelectWinnerResult } from './challenges/select-winner.js';
 export { processPayout } from './funding/process-payout.js';
 export type { ProcessPayoutResult } from './funding/process-payout.js';
+export { cancelChallenge } from './challenges/cancel-challenge.js';
+export type { CancelChallengeResult } from './challenges/cancel-challenge.js';
 export { registerUser } from './users/register-user.js';
 export type { RegisterUserResult } from './users/register-user.js';
 export { expireSlots } from './workers/expire-slots.js';
