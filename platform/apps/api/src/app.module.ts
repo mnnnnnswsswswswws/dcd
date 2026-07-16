@@ -6,6 +6,7 @@ import { PaymentsModule } from './payments/payments.module.js';
 import { ChallengesModule } from './challenges/challenges.module.js';
 import { SubmissionsModule } from './submissions/submissions.module.js';
 import { UsersModule } from './users/users.module.js';
+import { FeedModule } from './feed/feed.module.js';
 import { WebhooksModule } from './webhooks/webhooks.module.js';
 import { HealthController } from './health/health.controller.js';
 
@@ -18,6 +19,7 @@ import { HealthController } from './health/health.controller.js';
     UsersModule,
     ChallengesModule,
     SubmissionsModule,
+    FeedModule,
     WebhooksModule,
   ],
   controllers: [HealthController],

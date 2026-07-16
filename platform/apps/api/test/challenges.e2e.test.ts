@@ -275,6 +275,21 @@ describe('Read-Endpoints (Discover/Admin)', () => {
       .expect(200);
     expect(Array.isArray(res.body)).toBe(true);
   });
+
+  it('liefert winner=null solange nicht entschieden', async () => {
+    const creator = await prisma.user.create({ data: { isAdult: true } });
+    const create = await request(app.getHttpServer())
+      .post('/v1/challenges')
+      .set('Authorization', `Bearer ${creator.id}`)
+      .send({ selectionMode: 'CREATOR_DECIDES', prizeAmountCents: 10_000, submissionDeadline: new Date(Date.now() + 3_600_000).toISOString() })
+      .expect(201);
+    const detail = await request(app.getHttpServer()).get(`/v1/challenges/${create.body.challenge.id}`).expect(200);
+    expect(detail.body.winner).toBeNull();
+  });
+
+  it('Feed ist ohne Flag nicht verfügbar (404)', async () => {
+    await request(app.getHttpServer()).get('/v1/feed').expect(404);
+  });
 });
 
 describe('GET /health', () => {

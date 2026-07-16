@@ -92,6 +92,7 @@ Controller ist ein dünner Wrapper um `joinChallenge`; ein globaler Filter mappt
 | `GET  /v1/challenges`                   | —       | Liste (optional `?status=`), für Discover/Admin         |
 | `GET  /v1/challenges/:id`               | —       | Öffentlicher Zustand inkl. belegter Plätze             |
 | `GET  /v1/challenges/:id/submissions`   | Bearer  | Einsendungen + Stimmenzahl (Moderation/Auswahl)         |
+| `GET  /v1/feed`                         | —       | Öffentlicher Feed entschiedener Challenges (`PUBLIC_FEED_ENABLED`) |
 | `POST /v1/webhooks/payments`            | Secret/Sig | Vollfinanzierung bestätigen → veröffentlichen (idempotent) |
 | `GET  /health`                          | —       | Liveness + DB-Erreichbarkeit                            |
 

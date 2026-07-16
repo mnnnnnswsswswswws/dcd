@@ -14,6 +14,7 @@ interface ChallengeDetail {
   maxSlots: number;
   submissionDeadline: string | null;
   occupiedSlots: number;
+  winner: { winnerSubmissionId: string | null; decisionSource: string } | null;
 }
 
 export default function ChallengeDetailPage() {
@@ -80,6 +81,11 @@ export default function ChallengeDetailPage() {
             <span className="muted">
               Plätze: {challenge.occupiedSlots}/{challenge.maxSlots}
             </span>
+            {challenge.winner && (
+              <span className="badge" title={challenge.winner.winnerSubmissionId ?? ''}>
+                Gewinner: {challenge.winner.decisionSource}
+              </span>
+            )}
           </p>
 
           <div className="row" style={{ margin: '12px 0' }}>

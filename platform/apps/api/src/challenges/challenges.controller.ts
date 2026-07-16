@@ -126,7 +126,11 @@ export class ChallengesController {
     const occupied = await this.prisma.slot.count({
       where: { challengeId: id, status: { in: ['RESERVED', 'CAPTURING', 'UPLOADING', 'SUBMITTED'] } },
     });
-    return { ...challenge, occupiedSlots: occupied };
+    const decision = await this.prisma.winnerDecision.findUnique({
+      where: { challengeId: id },
+      select: { winnerSubmissionId: true, decisionSource: true },
+    });
+    return { ...challenge, occupiedSlots: occupied, winner: decision };
   }
 
   /** Reserviert einen Teilnehmerplatz für den authentifizierten Nutzer. */
