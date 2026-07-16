@@ -36,6 +36,10 @@ export default function HomePage() {
 
       {error && <p className="error">Fehler: {error}</p>}
 
+      <p>
+        <Link href="/create">+ Eigene Challenge erstellen</Link>
+      </p>
+
       <h2 style={{ fontSize: '1.15rem' }}>Offene Challenges</h2>
       <div className="grid">
         {open.map((c) => (
