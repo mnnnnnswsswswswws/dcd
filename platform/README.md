@@ -260,6 +260,12 @@ Beide echten Provider laden ihre SDKs **lazy** — Mock-Betrieb und Tests brauch
 nicht. Live-Betrieb erfordert nur, die jeweiligen Secrets als Umgebungsvariablen zu
 hinterlegen.
 
+## CI
+
+`.github/workflows/ci.yml` läuft bei jedem Push/PR (Pfad `platform/**`): Installation,
+`prisma generate` + `migrate deploy` gegen einen PostgreSQL-16-Service, `tsc` über alle
+Pakete, Unit-/Integration-/e2e-Tests und die Builds von `apps/admin` und `apps/web`.
+
 ## Sicherheit & Launch-Härtung
 
 Der API-Server ist für den Produktivbetrieb gehärtet (alles im `main.ts`-Bootstrap):

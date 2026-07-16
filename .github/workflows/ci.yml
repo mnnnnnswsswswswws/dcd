@@ -1,0 +1,71 @@
+name: Platform CI
+
+on:
+  push:
+    branches: [main, "claude/**"]
+    paths: ["platform/**", ".github/workflows/ci.yml"]
+  pull_request:
+    paths: ["platform/**", ".github/workflows/ci.yml"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: platform
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: vcp
+          POSTGRES_PASSWORD: vcp
+          POSTGRES_DB: vcp
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U vcp -d vcp"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: "postgresql://vcp:vcp@localhost:5432/vcp?schema=public"
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Prisma generate
+        run: pnpm exec prisma generate
+
+      - name: Apply migrations (incl. ledger-immutability triggers)
+        run: pnpm exec prisma migrate deploy
+
+      - name: Typecheck
+        run: pnpm -r typecheck
+
+      - name: Unit tests (packages + api)
+        run: |
+          pnpm -r --filter './packages/*' test
+          pnpm --filter @vcp/api test
+
+      - name: Integration tests (DB)
+        run: pnpm --filter @vcp/api test:integration
+
+      - name: E2E tests (DB)
+        run: pnpm --filter @vcp/api test:e2e
+
+      - name: Build frontends
+        run: |
+          pnpm --filter @vcp/admin build
+          pnpm --filter @vcp/web build
