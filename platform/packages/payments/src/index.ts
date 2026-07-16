@@ -6,6 +6,9 @@
  * gibt es nur den `MockPaymentProvider`; ein echter Provider (Stripe Connect) wird
  * erst nach ausdrücklicher Flag-Freigabe angebunden. Beträge ausschließlich in Cent.
  */
+import { StripePaymentProvider, StripeWebhookVerifier } from './stripe.js';
+import { MockWebhookVerifier, type WebhookVerifier } from './webhook-verifier.js';
+
 export type Currency = 'eur';
 
 export interface CreateFundingIntentParams {
@@ -74,18 +77,48 @@ export class MockPaymentProvider implements PaymentProvider {
 }
 
 export interface PaymentProviderEnv {
+  PAYMENTS_PROVIDER?: 'mock' | 'stripe';
   REAL_MONEY_ENABLED: boolean;
+  STRIPE_SECRET_KEY?: string;
 }
 
 /**
- * Wählt den Provider. Ist Echtgeld aktiviert, existiert (noch) kein Live-Provider —
- * die Factory wirft dann hart, damit niemals versehentlich echtes Geld bewegt wird.
+ * Wählt den Zahlungsanbieter. `stripe` (auch im Testmodus) erfordert einen
+ * Secret-Key. Der Mock kann kein echtes Geld bewegen — ist Echtgeld aktiviert, ohne
+ * dass ein echter Provider gewählt ist, wirft die Factory hart.
  */
 export function createPaymentProvider(env: PaymentProviderEnv): PaymentProvider {
+  if (env.PAYMENTS_PROVIDER === 'stripe') {
+    if (!env.STRIPE_SECRET_KEY) {
+      throw new Error('PAYMENTS_PROVIDER=stripe erfordert STRIPE_SECRET_KEY.');
+    }
+    return new StripePaymentProvider(env.STRIPE_SECRET_KEY);
+  }
   if (env.REAL_MONEY_ENABLED) {
-    throw new Error(
-      'REAL_MONEY_ENABLED=true, aber es ist kein Live-Zahlungsanbieter angebunden.',
-    );
+    throw new Error('REAL_MONEY_ENABLED=true, aber kein Live-Zahlungsanbieter gewählt (PAYMENTS_PROVIDER=stripe).');
   }
   return new MockPaymentProvider();
 }
+
+export interface WebhookVerifierEnv {
+  PAYMENTS_PROVIDER?: 'mock' | 'stripe';
+  WEBHOOK_SECRET: string;
+  STRIPE_SECRET_KEY?: string;
+  STRIPE_WEBHOOK_SECRET?: string;
+}
+
+/** Wählt den Webhook-Verifier passend zum Zahlungsanbieter. */
+export function createWebhookVerifier(env: WebhookVerifierEnv): WebhookVerifier {
+  if (env.PAYMENTS_PROVIDER === 'stripe') {
+    if (!env.STRIPE_SECRET_KEY || !env.STRIPE_WEBHOOK_SECRET) {
+      throw new Error('PAYMENTS_PROVIDER=stripe erfordert STRIPE_SECRET_KEY und STRIPE_WEBHOOK_SECRET.');
+    }
+    return new StripeWebhookVerifier(env.STRIPE_SECRET_KEY, env.STRIPE_WEBHOOK_SECRET);
+  }
+  return new MockWebhookVerifier(env.WEBHOOK_SECRET);
+}
+
+export { StripePaymentProvider, StripeWebhookVerifier };
+export { MockWebhookVerifier };
+export type { WebhookVerifier };
+export type { WebhookHeaders, NormalizedFundingEvent } from './webhook-verifier.js';

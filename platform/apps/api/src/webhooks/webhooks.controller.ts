@@ -1,55 +1,55 @@
 import {
   BadRequestException,
-  Body,
   Controller,
-  Headers,
   HttpCode,
   Inject,
   Post,
+  Req,
   UnauthorizedException,
 } from '@nestjs/common';
-import { loadEnv } from '@vcp/config';
+import type { RawBodyRequest } from '@nestjs/common';
+import type { Request } from 'express';
+import type { WebhookVerifier } from '@vcp/payments';
 import type { EventPublisher } from '../events/event-publisher.js';
 import { EVENT_PUBLISHER } from '../events/events.module.js';
+import { WEBHOOK_VERIFIER } from '../payments/payments.module.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { confirmFunding } from '../funding/confirm-funding.js';
-
-interface PaymentWebhookBody {
-  type?: string;
-  providerRef?: string;
-  amountCents?: number;
-}
 
 /**
  * Eingang für Zahlungs-Webhooks. Die Bestätigung der Vollfinanzierung ist die
  * **einzige** Quelle für die Veröffentlichung einer Challenge — niemals eine
- * Client-Erfolgsmeldung. Das Secret wird gegen `WEBHOOK_SECRET` geprüft.
+ * Client-Erfolgsmeldung. Die Verifikation (Mock-Secret bzw. Stripe-Signatur)
+ * übernimmt der konfigurierte `WebhookVerifier` über den Raw-Body.
  */
 @Controller('v1/webhooks')
 export class WebhooksController {
-  private readonly webhookSecret = loadEnv().WEBHOOK_SECRET;
-
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(EVENT_PUBLISHER) private readonly events: EventPublisher,
+    @Inject(WEBHOOK_VERIFIER) private readonly verifier: WebhookVerifier,
   ) {}
 
   @Post('payments')
   @HttpCode(200)
   async payments(
-    @Headers('x-webhook-secret') secret: string | undefined,
-    @Body() body: PaymentWebhookBody,
+    @Req() req: RawBodyRequest<Request>,
   ): Promise<{ received: true; published: boolean; alreadyConfirmed: boolean }> {
-    if (!secret || secret !== this.webhookSecret) {
-      throw new UnauthorizedException('Ungültiges Webhook-Secret.');
+    const rawBody = req.rawBody ?? Buffer.from(JSON.stringify(req.body ?? {}));
+
+    let event;
+    try {
+      event = await this.verifier.verify(rawBody, req.headers);
+    } catch {
+      throw new UnauthorizedException('Webhook-Verifikation fehlgeschlagen.');
     }
-    if (body.type !== 'funding.succeeded' || !body.providerRef || typeof body.amountCents !== 'number') {
+    if (event.type !== 'funding.succeeded') {
       throw new BadRequestException('Ungültige Webhook-Nutzlast.');
     }
 
     const result = await confirmFunding(
       { prisma: this.prisma, events: this.events },
-      { providerRef: body.providerRef, amountCents: body.amountCents },
+      { providerRef: event.providerRef, amountCents: event.amountCents },
     );
     return { received: true, published: result.published, alreadyConfirmed: result.alreadyConfirmed };
   }

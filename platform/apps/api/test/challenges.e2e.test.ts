@@ -37,7 +37,7 @@ async function seed(status: 'OPEN' | 'FULL' = 'OPEN') {
 
 beforeAll(async () => {
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
-  app = moduleRef.createNestApplication();
+  app = moduleRef.createNestApplication({ rawBody: true });
   app.useGlobalFilters(new AppErrorFilter());
   prisma = app.get(PrismaService);
   await app.init();

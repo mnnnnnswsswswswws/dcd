@@ -18,8 +18,16 @@ const baseSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(8080),
   SLOT_RESERVATION_TTL_MS: z.coerce.number().int().positive().default(600_000),
-  /** Gemeinsames Secret zur Verifikation eingehender Zahlungs-Webhooks. */
+  /** Gemeinsames Secret zur Verifikation eingehender Zahlungs-Webhooks (Mock-Provider). */
   WEBHOOK_SECRET: z.string().min(1).default('dev-webhook-secret'),
+
+  // --- Provider-Auswahl (Default jeweils Mock; echte Provider brauchen Credentials) ---
+  AUTH_PROVIDER: z.enum(['mock', 'firebase']).default('mock'),
+  FIREBASE_PROJECT_ID: z.string().optional(),
+
+  PAYMENTS_PROVIDER: z.enum(['mock', 'stripe']).default('mock'),
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
 
   REAL_MONEY_ENABLED: booleanFromEnv,
   STRIPE_LIVE_MODE: booleanFromEnv,
@@ -44,6 +52,21 @@ export const envSchema = baseSchema.superRefine((env, ctx) => {
       code: z.ZodIssueCode.custom,
       path: ['STRIPE_LIVE_MODE'],
       message: 'STRIPE_LIVE_MODE erfordert REAL_MONEY_ENABLED=true.',
+    });
+  }
+  // Provider-Auswahl braucht die jeweilige Konfiguration.
+  if (env.AUTH_PROVIDER === 'firebase' && env.FIREBASE_PROJECT_ID === undefined) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['FIREBASE_PROJECT_ID'],
+      message: 'AUTH_PROVIDER=firebase erfordert FIREBASE_PROJECT_ID.',
+    });
+  }
+  if (env.PAYMENTS_PROVIDER === 'stripe' && env.STRIPE_SECRET_KEY === undefined) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['STRIPE_SECRET_KEY'],
+      message: 'PAYMENTS_PROVIDER=stripe erfordert STRIPE_SECRET_KEY.',
     });
   }
 });

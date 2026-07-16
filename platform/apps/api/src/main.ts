@@ -6,7 +6,8 @@ import { AppErrorFilter } from './common/app-error.filter.js';
 
 async function bootstrap(): Promise<void> {
   const env = loadEnv();
-  const app = await NestFactory.create(AppModule, { logger: ['error', 'warn', 'log'] });
+  // rawBody wird für die Signaturprüfung von Zahlungs-Webhooks (Stripe) benötigt.
+  const app = await NestFactory.create(AppModule, { logger: ['error', 'warn', 'log'], rawBody: true });
   app.useGlobalFilters(new AppErrorFilter());
   await app.listen(env.PORT);
   // eslint-disable-next-line no-console
