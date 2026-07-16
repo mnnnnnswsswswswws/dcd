@@ -246,6 +246,21 @@ Beide echten Provider laden ihre SDKs **lazy** — Mock-Betrieb und Tests brauch
 nicht. Live-Betrieb erfordert nur, die jeweiligen Secrets als Umgebungsvariablen zu
 hinterlegen.
 
+## Sicherheit & Launch-Härtung
+
+Der API-Server ist für den Produktivbetrieb gehärtet (alles im `main.ts`-Bootstrap):
+
+- **Security-Header** via `helmet` (CSP, HSTS, `X-Content-Type-Options`, `X-Frame-Options`, …).
+- **CORS-Allowlist** über `CORS_ORIGINS` (kommagetrennt; leer = keine Cross-Origin-Freigabe,
+  `*` nur für Entwicklung). Fremde Origins erhalten keinen `Access-Control-Allow-Origin`.
+- **Rate-Limiting** (`@nestjs/throttler`) pro IP: `RATE_LIMIT_MAX`/`RATE_LIMIT_TTL_MS`
+  global, strenger auf `POST /v1/users` (20/min). Hinter Proxy via `trust proxy`.
+- **Request-ID + strukturierte Logs**: jede Antwort trägt `x-request-id`; Zugriffe
+  werden mit Methode/Pfad/Status/Dauer als JSON protokolliert.
+- **Graceful Shutdown** (`enableShutdownHooks`) — Prisma trennt sauber (Cloud-Run-SIGTERM).
+- **Produktions-Guards**: in `NODE_ENV=production` verweigert der Start ein Default-
+  `WEBHOOK_SECRET` (Fail-Fast); Mock-Auth/-Payments werden als Warnung protokolliert.
+
 ## Deployment
 
 Ein Container-Image (`Dockerfile`) bedient alle Prozesse (API, Worker, Migration) —
@@ -265,15 +280,17 @@ Details und eine Cloud-Run-Skizze: [`docs/DEPLOY.md`](docs/DEPLOY.md).
   Modelle + angrenzende Entitäten), nicht die vollständigen 31 Enums / 22 Modelle
   des Gesamtentwurfs.
 - **Verifiziert:** In der Build-Umgebung wurden `pnpm install`, `prisma db push`,
-  `tsc --noEmit` (alle Pakete) sowie die Tests tatsächlich ausgeführt — **56 Tests grün**:
-  - Unit (18) — contracts (2), domain (8), config (3), payments (5).
+  `tsc --noEmit` (alle Pakete) sowie die Tests tatsächlich ausgeführt — **77 Tests grün**:
+  - Unit (30) — contracts (2), domain (8), config (8), payments (12); api-Unit (3).
   - Integration gegen lokales PostgreSQL 16 (22): Pflicht-Concurrency-Test
     (50 parallele Joins → exakt 10), Expiration- und Fristen-Worker,
     Finanzierungs-Lebenszyklus inkl. Ledger-Immutability, der Geld-raus-Loop
     (submit → moderate → close → select → payout) mit allen drei Auswahlquellen und
     paralleler Winner-Lock-Sicherheit, sowie Abbruch + idempotente Erstattung.
-  - HTTP-e2e (16): Onboarding (18+-Gate), join/get/health, create→Webhook→join,
-    der volle Geld-raus-Loop und Abbruch.
+  - HTTP-e2e (22): Onboarding (18+-Gate), join/get/health, create→Webhook→join,
+    der volle Geld-raus-Loop, Abbruch, Read-/Feed-Endpoints.
+  - Live geprüft: Security-Header (helmet), `x-request-id`, CORS-Allowlist,
+    Rate-Limit (429 nach 20 Registrierungen) und der Prod-Secret-Guard (Fail-Fast).
   - Live per `curl` geprüft: **voll self-serve ohne DB-Seeding** — Nutzer registrieren
     → erstellen → Webhook-Funding → beitreten; sowie der komplette Geld-raus-Loop bis
     `WINNER_LOCKED` und zurückgehaltener Auszahlung.

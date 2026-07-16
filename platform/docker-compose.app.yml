@@ -8,9 +8,12 @@ name: vcp-platform
 
 x-app-env: &app-env
   DATABASE_URL: "postgresql://vcp:vcp@postgres:5432/vcp?schema=public"
-  NODE_ENV: "production"
-  # In echten Umgebungen ersetzen; alle Feature-Flags bleiben default false.
+  # Lokaler Demo-Stack läuft als development; in Produktion NODE_ENV=production setzen
+  # (dann wird ein echtes, nicht-Default WEBHOOK_SECRET erzwungen).
+  NODE_ENV: "development"
   WEBHOOK_SECRET: "change-me-in-production"
+  # Erlaubte CORS-Origins (z. B. die Admin-UI). Kommagetrennt oder * für alle.
+  CORS_ORIGINS: "http://localhost:3000"
 
 services:
   postgres:

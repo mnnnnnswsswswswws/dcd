@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { envSchema } from './index.js';
+import { envSchema, parseCorsOrigins } from './index.js';
 
 const base = {
   DATABASE_URL: 'postgresql://vcp:vcp@localhost:5432/vcp?schema=public',
@@ -25,5 +25,27 @@ describe('env schema', () => {
       PAYOUTS_ENABLED: 'true',
     });
     expect(result.success).toBe(true);
+  });
+
+  it('lehnt Default-WEBHOOK_SECRET in Produktion ab', () => {
+    const result = envSchema.safeParse({ ...base, NODE_ENV: 'production' });
+    expect(result.success).toBe(false);
+  });
+
+  it('akzeptiert ein echtes WEBHOOK_SECRET in Produktion', () => {
+    const result = envSchema.safeParse({ ...base, NODE_ENV: 'production', WEBHOOK_SECRET: 's3cret-value' });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe('parseCorsOrigins', () => {
+  it('leer → keine Freigabe', () => {
+    expect(parseCorsOrigins({})).toEqual([]);
+  });
+  it('* → alle', () => {
+    expect(parseCorsOrigins({ CORS_ORIGINS: '*' })).toBe('*');
+  });
+  it('kommagetrennt → Liste', () => {
+    expect(parseCorsOrigins({ CORS_ORIGINS: 'http://a.test, http://b.test' })).toEqual(['http://a.test', 'http://b.test']);
   });
 });

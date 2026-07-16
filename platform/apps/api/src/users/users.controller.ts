@@ -7,6 +7,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { apiError } from '@vcp/contracts';
 import type { EventPublisher } from '../events/event-publisher.js';
 import { EVENT_PUBLISHER } from '../events/events.module.js';
@@ -25,6 +26,7 @@ export class UsersController {
   /** Registriert einen Nutzer (18+-Gate). Die zurückgegebene ID dient als Bearer-Token. */
   @Post()
   @HttpCode(201)
+  @Throttle({ default: { ttl: 60_000, limit: 20 } })
   async register(@Body() body: { isAdult?: boolean }) {
     return registerUser(
       { prisma: this.prisma, events: this.events },

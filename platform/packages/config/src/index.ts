@@ -21,6 +21,12 @@ const baseSchema = z.object({
   /** Gemeinsames Secret zur Verifikation eingehender Zahlungs-Webhooks (Mock-Provider). */
   WEBHOOK_SECRET: z.string().min(1).default('dev-webhook-secret'),
 
+  /** Erlaubte CORS-Origins (kommagetrennt). Leer = keine Cross-Origin-Freigabe. `*` erlaubt alle. */
+  CORS_ORIGINS: z.string().optional(),
+  /** Rate-Limit: Zeitfenster (ms) und maximale Requests pro IP im Fenster. */
+  RATE_LIMIT_TTL_MS: z.coerce.number().int().positive().default(60_000),
+  RATE_LIMIT_MAX: z.coerce.number().int().positive().default(120),
+
   // --- Provider-Auswahl (Default jeweils Mock; echte Provider brauchen Credentials) ---
   AUTH_PROVIDER: z.enum(['mock', 'firebase']).default('mock'),
   FIREBASE_PROJECT_ID: z.string().optional(),
@@ -69,7 +75,26 @@ export const envSchema = baseSchema.superRefine((env, ctx) => {
       message: 'PAYMENTS_PROVIDER=stripe erfordert STRIPE_SECRET_KEY.',
     });
   }
+  // In Produktion dürfen keine Default-/Platzhalter-Secrets verwendet werden.
+  if (env.NODE_ENV === 'production') {
+    const insecure = ['dev-webhook-secret', 'change-me', 'change-me-in-production'];
+    if (insecure.includes(env.WEBHOOK_SECRET)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['WEBHOOK_SECRET'],
+        message: 'In Produktion muss WEBHOOK_SECRET auf einen echten, nicht-Default-Wert gesetzt sein.',
+      });
+    }
+  }
 });
+
+/** Parst die erlaubten CORS-Origins in eine Liste (bzw. `'*'`). */
+export function parseCorsOrigins(env: Pick<Env, 'CORS_ORIGINS'>): string[] | '*' {
+  const raw = env.CORS_ORIGINS?.trim();
+  if (!raw) return [];
+  if (raw === '*') return '*';
+  return raw.split(',').map((o) => o.trim()).filter((o) => o.length > 0);
+}
 
 export type Env = z.infer<typeof envSchema>;
 
