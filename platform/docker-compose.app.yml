@@ -59,7 +59,7 @@ services:
 
   worker-expire:
     image: vcp-platform:local
-    command: ["pnpm", "--filter", "@vcp/api", "worker:expire"]
+    command: ["pnpm", "--filter", "@vcp/workers", "worker:expire"]
     environment: *app-env
     depends_on:
       migrate:
@@ -67,7 +67,7 @@ services:
 
   worker-close:
     image: vcp-platform:local
-    command: ["pnpm", "--filter", "@vcp/api", "worker:close"]
+    command: ["pnpm", "--filter", "@vcp/workers", "worker:close"]
     environment: *app-env
     depends_on:
       migrate:

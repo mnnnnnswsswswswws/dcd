@@ -16,6 +16,7 @@ WORKDIR /app
 # Manifeste zuerst kopieren — bessere Layer-Cache-Ausnutzung bei Code-Änderungen.
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml tsconfig.base.json ./
 COPY apps/api/package.json apps/api/package.json
+COPY apps/workers/package.json apps/workers/package.json
 COPY packages/config/package.json packages/config/package.json
 COPY packages/contracts/package.json packages/contracts/package.json
 COPY packages/domain/package.json packages/domain/package.json

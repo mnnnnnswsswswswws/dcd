@@ -251,9 +251,10 @@ pnpm --filter @vcp/api test:e2e
 # API-Server starten (Port aus PORT, Default 8080):
 pnpm --filter @vcp/api start
 
-# Hintergrund-Worker (Dauerloop; `-- --once` für einen einzelnen Durchlauf):
-pnpm --filter @vcp/api worker:expire   # abgelaufene Reservierungen freigeben
-pnpm --filter @vcp/api worker:close    # Einsendungen abgelaufener Challenges schließen
+# Hintergrund-Worker (eigene App `apps/workers`; Dauerloop, `-- --once` = ein Durchlauf):
+pnpm --filter @vcp/workers worker:expire   # abgelaufene Reservierungen freigeben
+pnpm --filter @vcp/workers worker:close    # Einsendungen abgelaufener Challenges schließen
+pnpm --filter @vcp/workers worker:all      # beide Sweeps pro Durchlauf
 ```
 
 ### Definition of Done (`joinChallenge`)
