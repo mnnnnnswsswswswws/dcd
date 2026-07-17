@@ -73,6 +73,19 @@ enum PayoutStatus {
   FAILED
 }
 
+enum ReportStatus {
+  OPEN
+  REVIEWING
+  RESOLVED
+  DISMISSED
+}
+
+enum ReportPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
 model User {
   id        String   @id @default(uuid()) @db.Uuid
   isAdult   Boolean  @default(false) @map("is_adult")
@@ -82,6 +95,7 @@ model User {
   slots             Slot[]
   submissions       Submission[]
   votes             Vote[]
+  reports           Report[]
 
   @@map("users")
 }
@@ -146,6 +160,27 @@ model ChallengeFunding {
 
   @@index([status])
   @@map("challenge_fundings")
+}
+
+/// Nutzer-Meldungen zu Inhalten/Konten (Spec 14.5). Priorität wird aus dem Grund
+/// abgeleitet; Bearbeitung erfolgt in der Admin-/Moderationsqueue.
+model Report {
+  id          String         @id @default(uuid()) @db.Uuid
+  reporterId  String         @map("reporter_id") @db.Uuid
+  targetType  String         @map("target_type")
+  targetId    String         @map("target_id") @db.Uuid
+  reason      String
+  description String?
+  status      ReportStatus   @default(OPEN)
+  priority    ReportPriority @default(MEDIUM)
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  resolvedAt  DateTime?      @map("resolved_at") @db.Timestamptz(6)
+
+  reporter User @relation(fields: [reporterId], references: [id])
+
+  @@index([status, priority])
+  @@index([targetType, targetId])
+  @@map("reports")
 }
 
 /// Revisionssicheres Audit-Log kritischer Zustandsänderungen (Geld, Gewinner, Status).

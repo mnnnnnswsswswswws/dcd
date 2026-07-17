@@ -23,6 +23,10 @@ CREATE TYPE "LedgerDirection" AS ENUM ('DEBIT', 'CREDIT');
 
 CREATE TYPE "PayoutStatus" AS ENUM ('PENDING', 'HELD', 'PAID', 'FAILED');
 
+CREATE TYPE "ReportStatus" AS ENUM ('OPEN', 'REVIEWING', 'RESOLVED', 'DISMISSED');
+
+CREATE TYPE "ReportPriority" AS ENUM ('LOW', 'MEDIUM', 'HIGH');
+
 -- users -----------------------------------------------------------------------
 CREATE TABLE "users" (
   "id"         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -146,6 +150,22 @@ CREATE UNIQUE INDEX "challenge_fundings_challenge_id_key" ON "challenge_fundings
 CREATE UNIQUE INDEX "challenge_fundings_provider_ref_key" ON "challenge_fundings" ("provider_ref");
 CREATE UNIQUE INDEX "challenge_fundings_idempotency_key_key" ON "challenge_fundings" ("idempotency_key");
 CREATE INDEX "challenge_fundings_status_idx" ON "challenge_fundings" ("status");
+
+-- reports ---------------------------------------------------------------------
+CREATE TABLE "reports" (
+  "id"          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "reporter_id" UUID NOT NULL REFERENCES "users"("id"),
+  "target_type" TEXT NOT NULL,
+  "target_id"   UUID NOT NULL,
+  "reason"      TEXT NOT NULL,
+  "description" TEXT,
+  "status"      "ReportStatus" NOT NULL DEFAULT 'OPEN',
+  "priority"    "ReportPriority" NOT NULL DEFAULT 'MEDIUM',
+  "created_at"  TIMESTAMPTZ(6) NOT NULL DEFAULT now(),
+  "resolved_at" TIMESTAMPTZ(6)
+);
+CREATE INDEX "reports_status_priority_idx" ON "reports" ("status", "priority");
+CREATE INDEX "reports_target_type_target_id_idx" ON "reports" ("target_type", "target_id");
 
 -- audit_logs (append-only, siehe Trigger unten) -------------------------------
 CREATE TABLE "audit_logs" (

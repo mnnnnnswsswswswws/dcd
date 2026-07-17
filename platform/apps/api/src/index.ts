@@ -30,6 +30,8 @@ export { cancelChallenge } from './challenges/cancel-challenge.js';
 export type { CancelChallengeResult } from './challenges/cancel-challenge.js';
 export { registerUser } from './users/register-user.js';
 export type { RegisterUserResult } from './users/register-user.js';
+export { createReport } from './reports/create-report.js';
+export type { CreateReportResult } from './reports/create-report.js';
 export { expireSlots } from './workers/expire-slots.js';
 export type { ExpireSlotsDeps, ExpireSlotsResult } from './workers/expire-slots.js';
 export { closeExpiredSubmissions } from './workers/close-expired-submissions.js';

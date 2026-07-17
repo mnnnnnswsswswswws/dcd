@@ -81,6 +81,37 @@ export const DecisionSource = {
 } as const;
 export type DecisionSource = (typeof DecisionSource)[keyof typeof DecisionSource];
 
+/** Meldbare Ziel-Typen und Meldegründe (Spec 14.5). */
+export const REPORT_TARGET_TYPES = ['CHALLENGE', 'SUBMISSION', 'COMMENT', 'USER'] as const;
+export type ReportTargetType = (typeof REPORT_TARGET_TYPES)[number];
+
+export const REPORT_REASONS = [
+  'DANGEROUS',
+  'ILLEGAL',
+  'VIOLENCE',
+  'SEXUAL',
+  'MINORS',
+  'HARASSMENT',
+  'FRAUD',
+  'COPYRIGHT',
+  'PRIVACY',
+  'SPAM',
+  'OTHER',
+] as const;
+export type ReportReason = (typeof REPORT_REASONS)[number];
+
+export type ReportPriority = 'LOW' | 'MEDIUM' | 'HIGH';
+
+const HIGH_PRIORITY_REASONS: readonly ReportReason[] = ['DANGEROUS', 'ILLEGAL', 'VIOLENCE', 'SEXUAL', 'MINORS'];
+const MEDIUM_PRIORITY_REASONS: readonly ReportReason[] = ['HARASSMENT', 'FRAUD', 'PRIVACY'];
+
+/** Leitet die Bearbeitungspriorität aus dem Meldegrund ab (schwere Gründe zuerst). */
+export function reasonToPriority(reason: ReportReason): ReportPriority {
+  if (HIGH_PRIORITY_REASONS.includes(reason)) return 'HIGH';
+  if (MEDIUM_PRIORITY_REASONS.includes(reason)) return 'MEDIUM';
+  return 'LOW';
+}
+
 type TransitionMatrix<S extends string> = Readonly<Record<S, readonly S[]>>;
 
 /** Erlaubte Statusübergänge einer Challenge (fokussierter Ausschnitt). */

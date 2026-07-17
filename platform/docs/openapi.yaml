@@ -16,6 +16,7 @@ tags:
   - name: Challenges
   - name: Submissions
   - name: Feed
+  - name: Safety
   - name: Webhooks
   - name: System
 
@@ -346,6 +347,41 @@ paths:
       responses:
         '200': { description: Feed-Einträge }
         '404': { description: Feed nicht aktiviert }
+
+  /v1/reports:
+    post:
+      tags: [Safety]
+      summary: Inhalt oder Konto melden (Spec 14.5)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                targetType: { type: string, enum: [CHALLENGE, SUBMISSION, COMMENT, USER] }
+                targetId: { type: string, format: uuid }
+                reason:
+                  type: string
+                  enum: [DANGEROUS, ILLEGAL, VIOLENCE, SEXUAL, MINORS, HARASSMENT, FRAUD, COPYRIGHT, PRIVACY, SPAM, OTHER]
+                description: { type: string, maxLength: 1000 }
+              required: [targetType, targetId, reason]
+      responses:
+        '201': { description: Meldung erstellt (Priorität abgeleitet) }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    get:
+      tags: [Safety]
+      summary: Moderations-/Admin-Queue der Meldungen (Admin)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string, enum: [OPEN, REVIEWING, RESOLVED, DISMISSED] }
+      responses:
+        '200': { description: Meldungen (nach Priorität) }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
 
   /v1/webhooks/payments:
     post:

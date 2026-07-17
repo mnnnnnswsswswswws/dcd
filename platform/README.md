@@ -32,7 +32,7 @@ keine Echtgeld-Produktion, solange Flags `false` (Factory wirft hart).
 | 1 | Monorepo (pnpm + Turborepo) | ✅ |
 | 2 | apps: api / admin-web / workers / mobile | ⚠️ api+admin+web ✅, Worker als Runner in `apps/api` (noch nicht `apps/workers`), **mobile (Expo) fehlt** |
 | 3 | TypeScript, Tests, Env-Validierung / Linting | ✅ TS/Tests/Zod-Env/ESLint (Flat-Config, in CI) |
-| 4 | Vollständiges Prisma-Modell + erste Migration | ⚠️ Kernmodelle + `audit_logs`/`ledger_entries`/`votes`/`payouts`/`challenge_criteria` (Titel/Beschreibung/Kategorie/Kriterien); **fehlend:** profiles, capture_sessions, media_assets, transfers, connected_accounts, reports, moderation_cases, comments/likes/follows, notifications |
+| 4 | Vollständiges Prisma-Modell + erste Migration | ⚠️ Kernmodelle + `audit_logs`/`ledger_entries`/`votes`/`payouts`/`challenge_criteria`/`reports`; **fehlend:** profiles, capture_sessions, media_assets, transfers, connected_accounts, moderation_cases, comments/likes/follows, notifications |
 | 5 | Firebase-Auth + App-Check | ⚠️ `FirebaseTokenVerifier` (Mock-Default) vorhanden; **App-Check fehlt** |
 | 6 | Challenge-State-Machine | ✅ (Status-Namen weichen vom Dokument ab — s. offene Punkte) |
 | 7 | Transaktionssichere `join`-Logik | ✅ |
@@ -141,6 +141,8 @@ OpenAPI-3.1-Spezifikation liegt unter [`docs/openapi.yaml`](docs/openapi.yaml).
 | `GET  /v1/challenges/:id`               | —       | Öffentlicher Zustand inkl. belegter Plätze             |
 | `GET  /v1/challenges/:id/submissions`   | Bearer  | Einsendungen + Stimmenzahl (Moderation/Auswahl)         |
 | `GET  /v1/feed`                         | —       | Öffentlicher Feed entschiedener Challenges (`PUBLIC_FEED_ENABLED`) |
+| `POST /v1/reports`                      | Bearer  | Inhalt/Konto melden (Priorität aus Grund abgeleitet)    |
+| `GET  /v1/reports`                      | Admin   | Moderations-/Meldungs-Queue                             |
 | `POST /v1/webhooks/payments`            | Secret/Sig | Vollfinanzierung bestätigen → veröffentlichen (idempotent) |
 | `GET  /health`                          | —       | Liveness + DB-Erreichbarkeit                            |
 

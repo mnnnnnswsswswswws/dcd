@@ -6,7 +6,20 @@ import {
   canTransitionSlot,
   canTransitionSubmission,
   isCountingSlotStatus,
+  reasonToPriority,
 } from './index.js';
+
+describe('reasonToPriority', () => {
+  it('stuft schwere Gründe als HIGH ein', () => {
+    expect(reasonToPriority('MINORS')).toBe('HIGH');
+    expect(reasonToPriority('VIOLENCE')).toBe('HIGH');
+  });
+  it('stuft mittlere und leichte Gründe korrekt ein', () => {
+    expect(reasonToPriority('FRAUD')).toBe('MEDIUM');
+    expect(reasonToPriority('SPAM')).toBe('LOW');
+    expect(reasonToPriority('OTHER')).toBe('LOW');
+  });
+});
 
 describe('counting slot statuses', () => {
   it('zählt RESERVED/CAPTURING/UPLOADING/SUBMITTED', () => {
