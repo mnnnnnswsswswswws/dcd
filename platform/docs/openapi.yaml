@@ -37,6 +37,8 @@ components:
       type: object
       properties:
         id: { type: string, format: uuid }
+        title: { type: string }
+        category: { type: string, nullable: true }
         status: { $ref: '#/components/schemas/ChallengeStatus' }
         selectionMode: { type: string, enum: [CREATOR_DECIDES, COMMUNITY_VOTE] }
         prizeAmountCents: { type: integer }
@@ -165,10 +167,22 @@ paths:
             schema:
               type: object
               properties:
+                title: { type: string, maxLength: 80 }
+                description: { type: string, maxLength: 2000 }
+                category: { type: string, maxLength: 80 }
                 selectionMode: { type: string, enum: [CREATOR_DECIDES, COMMUNITY_VOTE] }
                 prizeAmountCents: { type: integer, minimum: 1 }
                 submissionDeadline: { type: string, format: date-time }
-              required: [selectionMode, prizeAmountCents, submissionDeadline]
+                criteria:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      title: { type: string }
+                      description: { type: string }
+                      mandatory: { type: boolean, default: true }
+                      evidenceType: { type: string }
+              required: [title, selectionMode, prizeAmountCents, submissionDeadline]
       responses:
         '201':
           description: Erstellt

@@ -145,6 +145,7 @@ describe('Lebenszyklus über HTTP: erstellen → Webhook → beitreten', () => {
       .post('/v1/challenges')
       .set('Authorization', `Bearer ${creator.id}`)
       .send({
+        title: 'Test-Challenge',
         selectionMode: 'CREATOR_DECIDES',
         prizeAmountCents: 10_000,
         submissionDeadline: new Date(Date.now() + 3_600_000).toISOString(),
@@ -207,7 +208,7 @@ describe('POST /v1/challenges/:id/cancel', () => {
     const create = await request(app.getHttpServer())
       .post('/v1/challenges')
       .set('Authorization', `Bearer ${creator.id}`)
-      .send({ selectionMode: 'CREATOR_DECIDES', prizeAmountCents: 10_000, submissionDeadline: new Date(Date.now() + 3_600_000).toISOString() })
+      .send({ title: 'Test-Challenge', selectionMode: 'CREATOR_DECIDES', prizeAmountCents: 10_000, submissionDeadline: new Date(Date.now() + 3_600_000).toISOString() })
       .expect(201);
     const challengeId = create.body.challenge.id as string;
 
@@ -229,7 +230,7 @@ describe('POST /v1/challenges/:id/cancel', () => {
     const create = await request(app.getHttpServer())
       .post('/v1/challenges')
       .set('Authorization', `Bearer ${creator.id}`)
-      .send({ selectionMode: 'CREATOR_DECIDES', prizeAmountCents: 10_000, submissionDeadline: new Date(Date.now() + 3_600_000).toISOString() })
+      .send({ title: 'Test-Challenge', selectionMode: 'CREATOR_DECIDES', prizeAmountCents: 10_000, submissionDeadline: new Date(Date.now() + 3_600_000).toISOString() })
       .expect(201);
     const stranger = await prisma.user.create({ data: { isAdult: true } });
     const res = await request(app.getHttpServer())
@@ -246,7 +247,7 @@ describe('Read-Endpoints (Discover/Admin)', () => {
     const create = await request(app.getHttpServer())
       .post('/v1/challenges')
       .set('Authorization', `Bearer ${creator.id}`)
-      .send({ selectionMode: 'CREATOR_DECIDES', prizeAmountCents: 10_000, submissionDeadline: new Date(Date.now() + 3_600_000).toISOString() })
+      .send({ title: 'Test-Challenge', selectionMode: 'CREATOR_DECIDES', prizeAmountCents: 10_000, submissionDeadline: new Date(Date.now() + 3_600_000).toISOString() })
       .expect(201);
     const id = create.body.challenge.id as string;
 
@@ -264,7 +265,7 @@ describe('Read-Endpoints (Discover/Admin)', () => {
     const create = await request(app.getHttpServer())
       .post('/v1/challenges')
       .set('Authorization', `Bearer ${creator.id}`)
-      .send({ selectionMode: 'CREATOR_DECIDES', prizeAmountCents: 10_000, submissionDeadline: new Date(Date.now() + 3_600_000).toISOString() })
+      .send({ title: 'Test-Challenge', selectionMode: 'CREATOR_DECIDES', prizeAmountCents: 10_000, submissionDeadline: new Date(Date.now() + 3_600_000).toISOString() })
       .expect(201);
     const id = create.body.challenge.id as string;
 
@@ -281,7 +282,7 @@ describe('Read-Endpoints (Discover/Admin)', () => {
     const create = await request(app.getHttpServer())
       .post('/v1/challenges')
       .set('Authorization', `Bearer ${creator.id}`)
-      .send({ selectionMode: 'CREATOR_DECIDES', prizeAmountCents: 10_000, submissionDeadline: new Date(Date.now() + 3_600_000).toISOString() })
+      .send({ title: 'Test-Challenge', selectionMode: 'CREATOR_DECIDES', prizeAmountCents: 10_000, submissionDeadline: new Date(Date.now() + 3_600_000).toISOString() })
       .expect(201);
     const detail = await request(app.getHttpServer()).get(`/v1/challenges/${create.body.challenge.id}`).expect(200);
     expect(detail.body.winner).toBeNull();
@@ -289,6 +290,45 @@ describe('Read-Endpoints (Discover/Admin)', () => {
 
   it('Feed ist ohne Flag nicht verfügbar (404)', async () => {
     await request(app.getHttpServer()).get('/v1/feed').expect(404);
+  });
+});
+
+describe('Titel & Kriterien', () => {
+  it('erstellt mit Titel/Kategorie/Kriterien und gibt sie im Detail zurück', async () => {
+    const creator = await prisma.user.create({ data: { isAdult: true } });
+    const create = await request(app.getHttpServer())
+      .post('/v1/challenges')
+      .set('Authorization', `Bearer ${creator.id}`)
+      .send({
+        title: 'Bester Freiwurf',
+        description: 'Zeig fünf Treffer aus fünf Positionen.',
+        category: 'Sport und Skills',
+        selectionMode: 'CREATOR_DECIDES',
+        prizeAmountCents: 10_000,
+        submissionDeadline: new Date(Date.now() + 3_600_000).toISOString(),
+        criteria: [
+          { title: 'Fünf Treffer sichtbar', mandatory: true },
+          { title: 'Kein Schnitt', mandatory: true, evidenceType: 'CONTINUOUS' },
+        ],
+      })
+      .expect(201);
+    expect(create.body.challenge.title).toBe('Bester Freiwurf');
+
+    const detail = await request(app.getHttpServer()).get(`/v1/challenges/${create.body.challenge.id}`).expect(200);
+    expect(detail.body.title).toBe('Bester Freiwurf');
+    expect(detail.body.category).toBe('Sport und Skills');
+    expect(detail.body.criteria).toHaveLength(2);
+    expect(detail.body.criteria[0].title).toBe('Fünf Treffer sichtbar');
+    expect(detail.body.criteria[0].sortOrder).toBe(0);
+  });
+
+  it('lehnt leeren Titel ab (400)', async () => {
+    const creator = await prisma.user.create({ data: { isAdult: true } });
+    await request(app.getHttpServer())
+      .post('/v1/challenges')
+      .set('Authorization', `Bearer ${creator.id}`)
+      .send({ title: '', selectionMode: 'CREATOR_DECIDES', prizeAmountCents: 10_000, submissionDeadline: new Date(Date.now() + 3_600_000).toISOString() })
+      .expect(400);
   });
 });
 

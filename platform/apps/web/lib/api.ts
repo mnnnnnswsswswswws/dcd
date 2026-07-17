@@ -63,6 +63,8 @@ export async function register(): Promise<string> {
 
 export interface ChallengeSummary {
   id: string;
+  title: string;
+  category: string | null;
   status: string;
   selectionMode: string;
   prizeAmountCents: number;
@@ -71,8 +73,19 @@ export interface ChallengeSummary {
   createdAt: string;
 }
 
+export interface Criterion {
+  id: string;
+  title: string;
+  description: string | null;
+  mandatory: boolean;
+  evidenceType: string | null;
+  sortOrder: number;
+}
+
 export interface ChallengeDetail extends ChallengeSummary {
+  description: string | null;
   occupiedSlots: number;
+  criteria: Criterion[];
   winner: { winnerSubmissionId: string | null; decisionSource: string } | null;
 }
 

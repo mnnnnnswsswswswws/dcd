@@ -16,7 +16,7 @@ async function fundedOpenChallenge(deadline: Date): Promise<string> {
   const creator = await prisma.user.create({ data: { isAdult: true } });
   const created = await createChallenge(
     { prisma, payments, events },
-    { creatorId: creator.id, selectionMode: 'CREATOR_DECIDES', prizeAmountCents: 10_000, submissionDeadline: deadline },
+    { creatorId: creator.id, title: 'Test-Challenge', selectionMode: 'CREATOR_DECIDES', prizeAmountCents: 10_000, submissionDeadline: deadline },
   );
   await confirmFunding({ prisma, events }, { providerRef: created.funding.providerRef, amountCents: 10_000 });
   return created.challenge.id;

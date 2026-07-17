@@ -46,6 +46,7 @@ describe('Challenge-Lebenszyklus', () => {
       { prisma, payments, events },
       {
         creatorId,
+        title: 'Test-Challenge',
         selectionMode: 'CREATOR_DECIDES',
         prizeAmountCents: 10_000,
         submissionDeadline: new Date(Date.now() + 3_600_000),
@@ -92,7 +93,7 @@ describe('Challenge-Lebenszyklus', () => {
     const creatorId = await makeCreator();
     const created = await createChallenge(
       { prisma, payments, events },
-      { creatorId, selectionMode: 'CREATOR_DECIDES', prizeAmountCents: 5_000, submissionDeadline: new Date(Date.now() + 3_600_000) },
+      { creatorId, title: 'Test-Challenge', selectionMode: 'CREATOR_DECIDES', prizeAmountCents: 5_000, submissionDeadline: new Date(Date.now() + 3_600_000) },
     );
 
     const first = await confirmFunding({ prisma, events }, { providerRef: created.funding.providerRef, amountCents: 5_000 });
@@ -111,7 +112,7 @@ describe('Challenge-Lebenszyklus', () => {
     const creatorId = await makeCreator();
     const created = await createChallenge(
       { prisma, payments, events },
-      { creatorId, selectionMode: 'COMMUNITY_VOTE', prizeAmountCents: 7_500, submissionDeadline: new Date(Date.now() + 3_600_000) },
+      { creatorId, title: 'Test-Challenge', selectionMode: 'COMMUNITY_VOTE', prizeAmountCents: 7_500, submissionDeadline: new Date(Date.now() + 3_600_000) },
     );
 
     await expect(
@@ -135,7 +136,7 @@ describe('Challenge-Lebenszyklus', () => {
     const creatorId = await makeCreator();
     const created = await createChallenge(
       { prisma, payments, events },
-      { creatorId, selectionMode: 'CREATOR_DECIDES', prizeAmountCents: 1_000, submissionDeadline: new Date(Date.now() + 3_600_000) },
+      { creatorId, title: 'Test-Challenge', selectionMode: 'CREATOR_DECIDES', prizeAmountCents: 1_000, submissionDeadline: new Date(Date.now() + 3_600_000) },
     );
     await confirmFunding({ prisma, events }, { providerRef: created.funding.providerRef, amountCents: 1_000 });
 

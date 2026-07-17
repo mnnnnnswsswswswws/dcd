@@ -34,7 +34,7 @@ async function fundedWithApproved(mode: SelectionMode, count: number) {
   const creatorId = await makeUser();
   const created = await createChallenge(
     { prisma, payments, events },
-    { creatorId, selectionMode: mode, prizeAmountCents: 10_000, submissionDeadline: new Date(Date.now() + 3_600_000) },
+    { creatorId, title: 'Test-Challenge', selectionMode: mode, prizeAmountCents: 10_000, submissionDeadline: new Date(Date.now() + 3_600_000) },
   );
   await confirmFunding(deps, { providerRef: created.funding.providerRef, amountCents: 10_000 });
 
@@ -139,7 +139,7 @@ describe('Geld-raus-Loop', () => {
     const creatorId = await makeUser();
     const created = await createChallenge(
       { prisma, payments, events },
-      { creatorId, selectionMode: 'CREATOR_DECIDES', prizeAmountCents: 5_000, submissionDeadline: new Date(Date.now() + 3_600_000) },
+      { creatorId, title: 'Test-Challenge', selectionMode: 'CREATOR_DECIDES', prizeAmountCents: 5_000, submissionDeadline: new Date(Date.now() + 3_600_000) },
     );
     await confirmFunding(deps, { providerRef: created.funding.providerRef, amountCents: 5_000 });
     await closeSubmissions(deps, { challengeId: created.challenge.id, isAdmin: true });

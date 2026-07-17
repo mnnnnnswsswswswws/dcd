@@ -73,13 +73,26 @@ export default function ChallengePage() {
         <>
           <div className="card">
             <div className="row" style={{ justifyContent: 'space-between' }}>
-              <span className="badge">{challenge.status}</span>
+              <strong style={{ fontSize: '1.1rem' }}>{challenge.title || 'Ohne Titel'}</strong>
               <strong>{euro(challenge.prizeAmountCents)}</strong>
             </div>
+            {challenge.description && <p>{challenge.description}</p>}
             <p className="muted">
-              {challenge.selectionMode} · Plätze {challenge.occupiedSlots}/{challenge.maxSlots}
+              <span className="badge">{challenge.status}</span>
+              {challenge.category ? ` · ${challenge.category}` : ''} · {challenge.selectionMode} · Plätze{' '}
+              {challenge.occupiedSlots}/{challenge.maxSlots}
               {challenge.winner ? ` · Gewinner via ${challenge.winner.decisionSource}` : ''}
             </p>
+            {challenge.criteria.length > 0 && (
+              <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
+                {challenge.criteria.map((c) => (
+                  <li key={c.id}>
+                    {c.title}
+                    {c.mandatory ? '' : ' (optional)'}
+                  </li>
+                ))}
+              </ul>
+            )}
 
             {loggedIn ? (
               <div className="row">

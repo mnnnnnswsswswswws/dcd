@@ -54,6 +54,8 @@ export class UsersController {
   async myChallenges(@CurrentUserId() userId: string) {
     const summary = {
       id: true,
+      title: true,
+      category: true,
       status: true,
       selectionMode: true,
       prizeAmountCents: true,

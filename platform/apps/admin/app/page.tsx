@@ -55,6 +55,7 @@ export default function DashboardPage() {
       <table>
         <thead>
           <tr>
+            <th>Titel</th>
             <th>Status</th>
             <th>Modus</th>
             <th>Preis</th>
@@ -65,6 +66,7 @@ export default function DashboardPage() {
         <tbody>
           {challenges.map((c) => (
             <tr key={c.id}>
+              <td>{c.title || <span className="muted">— ohne Titel —</span>}</td>
               <td>
                 <span className="badge">{c.status}</span>
               </td>
@@ -78,7 +80,7 @@ export default function DashboardPage() {
           ))}
           {challenges.length === 0 && !loading && (
             <tr>
-              <td colSpan={5} className="muted">
+              <td colSpan={6} className="muted">
                 Keine Challenges gefunden.
               </td>
             </tr>

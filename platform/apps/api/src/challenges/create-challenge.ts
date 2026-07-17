@@ -8,11 +8,22 @@ import type { EventPublisher } from '../events/event-publisher.js';
 const MAX_SLOTS = 10;
 const PROVIDER_NAME = 'mock';
 
+const criterionSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  description: z.string().trim().max(1000).optional(),
+  mandatory: z.boolean().optional(),
+  evidenceType: z.string().trim().max(100).optional(),
+});
+
 const inputSchema = z.object({
   creatorId: z.string().uuid(),
+  title: z.string().trim().min(1).max(80),
+  description: z.string().trim().max(2000).optional(),
+  category: z.string().trim().max(80).optional(),
   selectionMode: z.enum(['CREATOR_DECIDES', 'COMMUNITY_VOTE']),
   prizeAmountCents: z.number().int().positive(),
   submissionDeadline: z.coerce.date(),
+  criteria: z.array(criterionSchema).max(20).optional(),
 });
 
 export type CreateChallengeInput = z.input<typeof inputSchema>;
@@ -27,6 +38,8 @@ export interface CreateChallengeDeps {
 export interface CreateChallengeResult {
   challenge: {
     id: string;
+    title: string;
+    category: string | null;
     status: ChallengeStatus;
     selectionMode: SelectionMode;
     prizeAmountCents: number;
@@ -78,6 +91,9 @@ export async function createChallenge(
       data: {
         id: challengeId,
         creatorId: input.creatorId,
+        title: input.title,
+        description: input.description,
+        category: input.category,
         status: 'PENDING_FUNDING',
         selectionMode: input.selectionMode,
         prizeAmountCents: input.prizeAmountCents,
@@ -85,6 +101,18 @@ export async function createChallenge(
         submissionDeadline: input.submissionDeadline,
       },
     });
+    if (input.criteria && input.criteria.length > 0) {
+      await tx.challengeCriterion.createMany({
+        data: input.criteria.map((c, index) => ({
+          challengeId,
+          title: c.title,
+          description: c.description,
+          mandatory: c.mandatory ?? true,
+          evidenceType: c.evidenceType,
+          sortOrder: index,
+        })),
+      });
+    }
     await tx.challengeFunding.create({
       data: {
         challengeId,
@@ -108,6 +136,8 @@ export async function createChallenge(
   return {
     challenge: {
       id: created.id,
+      title: created.title,
+      category: created.category,
       status: created.status,
       selectionMode: created.selectionMode,
       prizeAmountCents: created.prizeAmountCents,

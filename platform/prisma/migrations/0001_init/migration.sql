@@ -34,6 +34,9 @@ CREATE TABLE "users" (
 CREATE TABLE "challenges" (
   "id"                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   "creator_id"          UUID NOT NULL REFERENCES "users"("id"),
+  "title"               TEXT NOT NULL DEFAULT '',
+  "description"         TEXT,
+  "category"            TEXT,
   "status"              "ChallengeStatus" NOT NULL DEFAULT 'DRAFT',
   "selection_mode"      "SelectionMode" NOT NULL,
   "prize_amount_cents"  INTEGER NOT NULL,
@@ -43,6 +46,18 @@ CREATE TABLE "challenges" (
   "updated_at"          TIMESTAMPTZ(6) NOT NULL DEFAULT now()
 );
 CREATE INDEX "challenges_status_idx" ON "challenges" ("status");
+
+-- challenge_criteria ----------------------------------------------------------
+CREATE TABLE "challenge_criteria" (
+  "id"            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "challenge_id"  UUID NOT NULL REFERENCES "challenges"("id"),
+  "title"         TEXT NOT NULL,
+  "description"   TEXT,
+  "mandatory"     BOOLEAN NOT NULL DEFAULT true,
+  "evidence_type" TEXT,
+  "sort_order"    INTEGER NOT NULL
+);
+CREATE INDEX "challenge_criteria_challenge_id_idx" ON "challenge_criteria" ("challenge_id");
 
 -- slots -----------------------------------------------------------------------
 CREATE TABLE "slots" (

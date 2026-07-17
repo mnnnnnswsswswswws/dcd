@@ -19,6 +19,9 @@ function defaultDeadline(): string {
 
 export default function CreatePage() {
   const [loggedIn, setLoggedIn] = useState(false);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [category, setCategory] = useState('');
   const [prizeEuro, setPrizeEuro] = useState('100');
   const [mode, setMode] = useState('CREATOR_DECIDES');
   const [deadline, setDeadline] = useState('');
@@ -38,6 +41,9 @@ export default function CreatePage() {
     try {
       const prizeAmountCents = Math.round(Number(prizeEuro) * 100);
       const body = {
+        title: title.trim(),
+        description: description.trim() || undefined,
+        category: category.trim() || undefined,
         selectionMode: mode,
         prizeAmountCents,
         submissionDeadline: new Date(deadline).toISOString(),
@@ -64,6 +70,18 @@ export default function CreatePage() {
       {loggedIn && !result && (
         <div className="card grid" style={{ maxWidth: 460 }}>
           <label>
+            Titel
+            <input maxLength={80} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="z. B. Bester Freiwurf" />
+          </label>
+          <label>
+            Beschreibung
+            <input maxLength={2000} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Worum geht es?" />
+          </label>
+          <label>
+            Kategorie
+            <input maxLength={80} value={category} onChange={(e) => setCategory(e.target.value)} placeholder="z. B. Sport und Skills" />
+          </label>
+          <label>
             Preisgeld (EUR)
             <input type="number" min="1" step="1" value={prizeEuro} onChange={(e) => setPrizeEuro(e.target.value)} />
           </label>
@@ -78,7 +96,7 @@ export default function CreatePage() {
             Einsendeschluss
             <input type="datetime-local" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
           </label>
-          <button className="primary" onClick={submit} disabled={busy}>
+          <button className="primary" onClick={submit} disabled={busy || title.trim().length === 0}>
             {busy ? 'Erstelle…' : 'Challenge erstellen'}
           </button>
         </div>

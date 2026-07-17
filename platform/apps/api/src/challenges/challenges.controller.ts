@@ -77,6 +77,8 @@ export class ChallengesController {
       take,
       select: {
         id: true,
+        title: true,
+        category: true,
         status: true,
         selectionMode: true,
         prizeAmountCents: true,
@@ -112,12 +114,19 @@ export class ChallengesController {
       where: { id },
       select: {
         id: true,
+        title: true,
+        description: true,
+        category: true,
         status: true,
         selectionMode: true,
         prizeAmountCents: true,
         maxSlots: true,
         submissionDeadline: true,
         createdAt: true,
+        criteria: {
+          orderBy: { sortOrder: 'asc' },
+          select: { id: true, title: true, description: true, mandatory: true, evidenceType: true, sortOrder: true },
+        },
       },
     });
     if (challenge === null) {

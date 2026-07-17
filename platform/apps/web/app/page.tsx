@@ -46,11 +46,13 @@ export default function HomePage() {
         {open.map((c) => (
           <Link key={c.id} href={`/challenges/${c.id}`} className="card" style={{ textDecoration: 'none', color: 'inherit' }}>
             <div className="row" style={{ justifyContent: 'space-between' }}>
-              <span className="badge">{c.status}</span>
+              <strong>{c.title || 'Ohne Titel'}</strong>
               <strong>{euro(c.prizeAmountCents)}</strong>
             </div>
             <div className="muted">
-              {c.selectionMode} · Frist {c.submissionDeadline ? new Date(c.submissionDeadline).toLocaleString('de-DE') : '—'}
+              <span className="badge">{c.status}</span> {c.category ? `· ${c.category} ` : ''}· {c.selectionMode}
+              {' · Frist '}
+              {c.submissionDeadline ? new Date(c.submissionDeadline).toLocaleString('de-DE') : '—'}
             </div>
           </Link>
         ))}

@@ -45,7 +45,7 @@ describe('Geld-raus-Loop über HTTP', () => {
     const create = await http()
       .post('/v1/challenges')
       .set('Authorization', `Bearer ${creator.id}`)
-      .send({ selectionMode: 'CREATOR_DECIDES', prizeAmountCents: 10_000, submissionDeadline: new Date(Date.now() + 3_600_000).toISOString() })
+      .send({ title: 'Test-Challenge', selectionMode: 'CREATOR_DECIDES', prizeAmountCents: 10_000, submissionDeadline: new Date(Date.now() + 3_600_000).toISOString() })
       .expect(201);
     const challengeId = create.body.challenge.id as string;
     await http()

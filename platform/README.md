@@ -32,7 +32,7 @@ keine Echtgeld-Produktion, solange Flags `false` (Factory wirft hart).
 | 1 | Monorepo (pnpm + Turborepo) | ✅ |
 | 2 | apps: api / admin-web / workers / mobile | ⚠️ api+admin+web ✅, Worker als Runner in `apps/api` (noch nicht `apps/workers`), **mobile (Expo) fehlt** |
 | 3 | TypeScript, Tests, Env-Validierung / Linting | ✅ TS/Tests/Zod-Env/ESLint (Flat-Config, in CI) |
-| 4 | Vollständiges Prisma-Modell + erste Migration | ⚠️ Kernmodelle + `audit_logs`/`ledger_entries`/`votes`/`payouts`; **fehlend:** profiles, criteria, capture_sessions, media_assets, transfers, connected_accounts, reports, moderation_cases, comments/likes/follows, notifications |
+| 4 | Vollständiges Prisma-Modell + erste Migration | ⚠️ Kernmodelle + `audit_logs`/`ledger_entries`/`votes`/`payouts`/`challenge_criteria` (Titel/Beschreibung/Kategorie/Kriterien); **fehlend:** profiles, capture_sessions, media_assets, transfers, connected_accounts, reports, moderation_cases, comments/likes/follows, notifications |
 | 5 | Firebase-Auth + App-Check | ⚠️ `FirebaseTokenVerifier` (Mock-Default) vorhanden; **App-Check fehlt** |
 | 6 | Challenge-State-Machine | ✅ (Status-Namen weichen vom Dokument ab — s. offene Punkte) |
 | 7 | Transaktionssichere `join`-Logik | ✅ |

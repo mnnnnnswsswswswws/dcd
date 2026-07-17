@@ -51,6 +51,8 @@ export async function api<T = unknown>(path: string, options: ApiOptions = {}): 
 
 export interface ChallengeSummary {
   id: string;
+  title: string;
+  category: string | null;
   status: string;
   selectionMode: string;
   prizeAmountCents: number;

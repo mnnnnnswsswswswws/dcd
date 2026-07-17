@@ -8,6 +8,8 @@ import { SettingsBar } from '../../settings-bar';
 
 interface ChallengeDetail {
   id: string;
+  title: string;
+  category: string | null;
   status: string;
   selectionMode: string;
   prizeAmountCents: number;
@@ -66,7 +68,7 @@ export default function ChallengeDetailPage() {
       <p>
         <Link href="/">← Übersicht</Link>
       </p>
-      <h1>Challenge</h1>
+      <h1>{challenge?.title || 'Challenge'}</h1>
       <SettingsBar onChange={load} />
 
       {error && <p className="error">Fehler: {error}</p>}
