@@ -16,7 +16,7 @@ export interface EventPublisher {
 
 export class LoggingEventPublisher implements EventPublisher {
   async publish(event: DomainEvent): Promise<void> {
-    // eslint-disable-next-line no-console
+     
     console.log(`[event] ${event.type}`, JSON.stringify(event.payload));
   }
 }

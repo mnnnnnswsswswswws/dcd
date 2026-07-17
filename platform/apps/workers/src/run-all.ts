@@ -8,7 +8,7 @@ void runLoop('all', async ({ prisma, events }) => {
   const expired = await expireSlots({ prisma, events });
   const closed = await closeExpiredSubmissions({ prisma, events });
   if (expired.expiredSlotCount > 0 || closed.closedChallengeIds.length > 0) {
-    // eslint-disable-next-line no-console
+     
     console.log(
       `[all] slots_freigegeben=${expired.expiredSlotCount} challenges_geschlossen=${closed.closedChallengeIds.length}`,
     );

@@ -34,7 +34,7 @@ export async function runLoop(
     try {
       await tick(ctx);
     } catch (error) {
-      // eslint-disable-next-line no-console
+       
       console.error(`[${name}] Fehler im Durchlauf:`, error);
     }
     if (runOnce) break;

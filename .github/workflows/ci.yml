@@ -51,6 +51,9 @@ jobs:
       - name: Apply migrations (incl. ledger-immutability triggers)
         run: pnpm exec prisma migrate deploy
 
+      - name: Lint
+        run: pnpm exec eslint .
+
       - name: Typecheck
         run: pnpm -r typecheck
 

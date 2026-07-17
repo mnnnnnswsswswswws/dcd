@@ -38,12 +38,12 @@ async function bootstrap(): Promise<void> {
   }
 
   await app.listen(env.PORT);
-  // eslint-disable-next-line no-console
+   
   console.log(`[api] hört auf Port ${env.PORT}`);
 }
 
 bootstrap().catch((error) => {
-  // eslint-disable-next-line no-console
+   
   console.error(error);
   process.exit(1);
 });
