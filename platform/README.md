@@ -30,7 +30,7 @@ keine Echtgeld-Produktion, solange Flags `false` (Factory wirft hart).
 | # | Punkt | Status |
 |---|-------|--------|
 | 1 | Monorepo (pnpm + Turborepo) | ✅ |
-| 2 | apps: api / admin-web / workers / mobile | ⚠️ api+admin+web ✅, Worker als Runner in `apps/api` (noch nicht `apps/workers`), **mobile (Expo) fehlt** |
+| 2 | apps: api / admin-web / workers / mobile | ✅ api + admin + web + **mobile (Expo SDK 57)** + `apps/workers` |
 | 3 | TypeScript, Tests, Env-Validierung / Linting | ✅ TS/Tests/Zod-Env/ESLint (Flat-Config, in CI) |
 | 4 | Vollständiges Prisma-Modell + erste Migration | ⚠️ Kernmodelle + `audit_logs`/`ledger_entries`/`votes`/`payouts`/`challenge_criteria`/`reports`/`evidence_assets`; **fehlend:** profiles, transfers, connected_accounts, moderation_cases, comments/likes/follows, notifications |
 | 5 | Firebase-Auth + App-Check | ⚠️ `FirebaseTokenVerifier` (Mock-Default) vorhanden; **App-Check fehlt** |
@@ -325,6 +325,20 @@ Beide Frontends sprechen ausschließlich die API. Die API-Basis wird für den La
 und das Web-Frontend erlaubt zusätzlich eine manuelle Override (localStorage) zum Testen.
 Die Frontend-Origins müssen in `CORS_ORIGINS` der API freigegeben sein (lokal z. B.
 `http://localhost:3000,http://localhost:3001`).
+
+## Mobile-App (`apps/mobile`)
+
+Native Teilnehmer-App (Expo SDK 57, expo-router, React Native 0.86) — Details und
+Setup in [`apps/mobile/README.md`](apps/mobile/README.md). Bildet den vollständigen
+Nutzer-Weg ab (Registrieren 18+, Entdecken, Beitreten, Voting, Melden, Ersteller-
+Selfservice, Challenge erstellen) und liefert die **In-App-Beweisaufnahme über die
+Gerätekamera** (`expo-camera`, Video, **ohne** Galerie-/Dateizugriff) — hinter
+`LONG_CAPTURE_ENABLED` mit `evidence-intent` → Aufnahme → Einreichen.
+
+Bewusst **aus dem pnpm-Workspace ausgenommen** (`!apps/mobile`): die Expo-Toolchain
+verwaltet eigene Abhängigkeiten/Lockfile (npm), der Web-CI-Install bleibt unverändert.
+API-Basis via `EXPO_PUBLIC_API_BASE`. Verifiziert: `tsc` grün, Metro-Web-Export grün
+(~820 Module); native Laufzeit/Kamera erfordert Gerät/Simulator (EAS-Build).
 
 ## Provider-Auswahl (Auth & Payments)
 

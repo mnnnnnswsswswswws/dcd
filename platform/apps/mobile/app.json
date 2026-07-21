@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "Video-Challenges",
+    "slug": "vcp-mobile",
+    "version": "0.0.0",
+    "orientation": "portrait",
+    "scheme": "vcp",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "de.vcp.mobile",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Für die In-App-Beweisaufnahme deiner Challenge-Einsendung.",
+        "NSMicrophoneUsageDescription": "Für Ton bei der In-App-Beweisaufnahme."
+      }
+    },
+    "android": {
+      "package": "de.vcp.mobile",
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Für die In-App-Beweisaufnahme deiner Challenge-Einsendung.",
+          "microphonePermission": "Für Ton bei der In-App-Beweisaufnahme.",
+          "recordAudioAndroid": true
+        }
+      ],
+      "expo-status-bar"
+    ],
+    "experiments": {
+      "typedRoutes": false
+    }
+  }
+}

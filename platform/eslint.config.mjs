@@ -12,6 +12,9 @@ export default tseslint.config(
       '**/coverage/**',
       '**/*.tsbuildinfo',
       'prisma/migrations/**',
+      // Die Expo-Mobile-App ist aus dem pnpm-Workspace ausgenommen und hat eine
+      // eigene Toolchain/Lint (expo lint) — hier nicht mitlinten.
+      'apps/mobile/**',
     ],
   },
   js.configs.recommended,
