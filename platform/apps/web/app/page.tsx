@@ -2,13 +2,22 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { api, euro, type ChallengeSummary, type FeedEntry } from '../lib/api';
-import { AccountBar } from './account-bar';
+import {
+  api,
+  euro,
+  selectionModeLabel,
+  statusLabel,
+  statusTone,
+  subscribeSession,
+  type ChallengeSummary,
+  type FeedEntry,
+} from '../lib/api';
 
 export default function HomePage() {
   const [open, setOpen] = useState<ChallengeSummary[]>([]);
   const [feed, setFeed] = useState<FeedEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setError(null);
@@ -16,8 +25,10 @@ export default function HomePage() {
       setOpen(await api<ChallengeSummary[]>('/v1/challenges?status=OPEN', { auth: false }));
     } catch (e) {
       setError((e as Error).message);
+    } finally {
+      setLoading(false);
     }
-    // Feed ist optional (Flag) — 404 ruhig behandeln.
+    // Feed ist optional (Flag PUBLIC_FEED_ENABLED) — 404 ruhig behandeln.
     try {
       setFeed(await api<FeedEntry[]>('/v1/feed', { auth: false }));
     } catch {
@@ -27,49 +38,69 @@ export default function HomePage() {
 
   useEffect(() => {
     void load();
+    return subscribeSession(load);
   }, [load]);
 
   return (
     <>
-      <h1>Video-Challenges</h1>
-      <AccountBar onChange={load} />
+      <section className="hero">
+        <h1>Zeig, was du kannst.</h1>
+        <p>
+          Tritt bezahlten Video-Challenges bei, reiche deinen Beweis in der App ein und gewinne das
+          Preisgeld. Max. 10 Plätze pro Challenge — schnell sein lohnt sich.
+        </p>
+        <div className="row" style={{ marginTop: 12 }}>
+          <Link href="/create" className="badge open" style={{ padding: '8px 14px' }}>
+            + Eigene Challenge erstellen
+          </Link>
+        </div>
+      </section>
 
       {error && <p className="error">Fehler: {error}</p>}
 
-      <p className="row">
-        <Link href="/create">+ Eigene Challenge erstellen</Link>
-        <Link href="/me">Meine Challenges</Link>
-      </p>
-
-      <h2 style={{ fontSize: '1.15rem' }}>Offene Challenges</h2>
+      <h2>Offene Challenges</h2>
+      {loading && <p className="muted">Lädt…</p>}
       <div className="grid">
         {open.map((c) => (
-          <Link key={c.id} href={`/challenges/${c.id}`} className="card" style={{ textDecoration: 'none', color: 'inherit' }}>
-            <div className="row" style={{ justifyContent: 'space-between' }}>
-              <strong>{c.title || 'Ohne Titel'}</strong>
-              <strong>{euro(c.prizeAmountCents)}</strong>
+          <Link key={c.id} href={`/challenges/${c.id}`} className="card tap">
+            <div className="row between">
+              <strong style={{ fontSize: '1.05rem' }}>{c.title || 'Ohne Titel'}</strong>
+              <span className="prize">{euro(c.prizeAmountCents)}</span>
             </div>
-            <div className="muted">
-              <span className="badge">{c.status}</span> {c.category ? `· ${c.category} ` : ''}· {c.selectionMode}
-              {' · Frist '}
+            <div className="row" style={{ marginTop: 8 }}>
+              <span className={`badge ${statusTone(c.status)}`}>{statusLabel(c.status)}</span>
+              {c.category && <span className="badge">{c.category}</span>}
+              <span className="badge">{selectionModeLabel(c.selectionMode)}</span>
+            </div>
+            <div className="muted" style={{ marginTop: 8, fontSize: '0.85rem' }}>
+              Einsendeschluss:{' '}
               {c.submissionDeadline ? new Date(c.submissionDeadline).toLocaleString('de-DE') : '—'}
             </div>
           </Link>
         ))}
-        {open.length === 0 && <p className="muted">Derzeit keine offenen Challenges.</p>}
+        {!loading && open.length === 0 && (
+          <div className="card">
+            <p className="muted" style={{ margin: 0 }}>
+              Derzeit keine offenen Challenges. Sei die/der Erste und{' '}
+              <Link href="/create">erstelle eine</Link>.
+            </p>
+          </div>
+        )}
       </div>
 
       {feed && feed.length > 0 && (
         <>
-          <h2 style={{ fontSize: '1.15rem', marginTop: 28 }}>Entschieden (Feed)</h2>
+          <h2>Entschieden</h2>
           <div className="grid">
             {feed.map((f) => (
               <div key={f.id} className="card">
-                <div className="row" style={{ justifyContent: 'space-between' }}>
-                  <span className="badge">{f.status}</span>
-                  <strong>{euro(f.prizeAmountCents)}</strong>
+                <div className="row between">
+                  <span className={`badge ${statusTone(f.status)}`}>{statusLabel(f.status)}</span>
+                  <span className="prize">{euro(f.prizeAmountCents)}</span>
                 </div>
-                <div className="muted">Gewinner via {f.winner?.decisionSource ?? '—'}</div>
+                <div className="muted" style={{ marginTop: 6, fontSize: '0.85rem' }}>
+                  Gewinner ermittelt · {selectionModeLabel(f.selectionMode)}
+                </div>
               </div>
             ))}
           </div>

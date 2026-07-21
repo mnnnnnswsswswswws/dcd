@@ -6,12 +6,18 @@ export interface AdminConfig {
 const API_BASE_KEY = 'vcp.apiBase';
 const TOKEN_KEY = 'vcp.token';
 
+/** Standard-API-Basis aus `NEXT_PUBLIC_API_BASE` (Launch) mit lokalem Fallback. */
+const DEFAULT_API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE && process.env.NEXT_PUBLIC_API_BASE.length > 0
+    ? process.env.NEXT_PUBLIC_API_BASE
+    : 'http://localhost:8080';
+
 export function getConfig(): AdminConfig {
   if (typeof window === 'undefined') {
-    return { apiBase: 'http://localhost:8080', token: '' };
+    return { apiBase: DEFAULT_API_BASE, token: '' };
   }
   return {
-    apiBase: window.localStorage.getItem(API_BASE_KEY) ?? 'http://localhost:8080',
+    apiBase: window.localStorage.getItem(API_BASE_KEY) ?? DEFAULT_API_BASE,
     token: window.localStorage.getItem(TOKEN_KEY) ?? '',
   };
 }

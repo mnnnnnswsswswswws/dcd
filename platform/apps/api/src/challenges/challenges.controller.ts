@@ -123,6 +123,7 @@ export class ChallengesController {
         maxSlots: true,
         submissionDeadline: true,
         createdAt: true,
+        creatorId: true,
         criteria: {
           orderBy: { sortOrder: 'asc' },
           select: { id: true, title: true, description: true, mandatory: true, evidenceType: true, sortOrder: true },

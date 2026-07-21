@@ -2,31 +2,32 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { api, euro, getConfig, type ChallengeSummary } from '../../lib/api';
-import { AccountBar } from '../account-bar';
+import {
+  api,
+  euro,
+  getToken,
+  selectionModeLabel,
+  statusLabel,
+  statusTone,
+  subscribeSession,
+  type ChallengeSummary,
+  type MyChallenges,
+} from '../../lib/api';
 
-interface JoinedChallenge extends ChallengeSummary {
-  slotStatus: string;
-}
-
-interface MyChallenges {
-  created: ChallengeSummary[];
-  joined: JoinedChallenge[];
-}
-
-function List({ items }: { items: (ChallengeSummary & { slotStatus?: string })[] }) {
+function CardList({ items }: { items: (ChallengeSummary & { slotStatus?: string })[] }) {
   if (items.length === 0) return <p className="muted">Keine.</p>;
   return (
     <div className="grid">
       {items.map((c) => (
-        <Link key={c.id} href={`/challenges/${c.id}`} className="card" style={{ textDecoration: 'none', color: 'inherit' }}>
-          <div className="row" style={{ justifyContent: 'space-between' }}>
-            <span className="badge">{c.status}</span>
-            <strong>{euro(c.prizeAmountCents)}</strong>
+        <Link key={`${c.id}-${c.slotStatus ?? 'own'}`} href={`/challenges/${c.id}`} className="card tap">
+          <div className="row between">
+            <strong>{c.title || 'Ohne Titel'}</strong>
+            <span className="prize">{euro(c.prizeAmountCents)}</span>
           </div>
-          <div className="muted">
-            {c.selectionMode}
-            {c.slotStatus ? ` · dein Slot: ${c.slotStatus}` : ''}
+          <div className="row" style={{ marginTop: 8 }}>
+            <span className={`badge ${statusTone(c.status)}`}>{statusLabel(c.status)}</span>
+            <span className="badge">{selectionModeLabel(c.selectionMode)}</span>
+            {c.slotStatus && <span className="badge">dein Slot: {c.slotStatus}</span>}
           </div>
         </Link>
       ))}
@@ -41,7 +42,7 @@ export default function MyChallengesPage() {
 
   const load = useCallback(async () => {
     setError(null);
-    const hasToken = Boolean(getConfig().token);
+    const hasToken = Boolean(getToken());
     setLoggedIn(hasToken);
     if (!hasToken) {
       setData(null);
@@ -56,6 +57,7 @@ export default function MyChallengesPage() {
 
   useEffect(() => {
     void load();
+    return subscribeSession(load);
   }, [load]);
 
   return (
@@ -64,17 +66,16 @@ export default function MyChallengesPage() {
         <Link href="/">← Alle Challenges</Link>
       </p>
       <h1>Meine Challenges</h1>
-      <AccountBar onChange={load} />
 
-      {!loggedIn && <p className="muted">Bitte oben registrieren/anmelden.</p>}
+      {!loggedIn && <div className="note">Bitte oben rechts registrieren/anmelden.</div>}
       {error && <p className="error">Fehler: {error}</p>}
 
       {data && (
         <>
-          <h2 style={{ fontSize: '1.15rem' }}>Erstellt</h2>
-          <List items={data.created} />
-          <h2 style={{ fontSize: '1.15rem', marginTop: 24 }}>Beigetreten</h2>
-          <List items={data.joined} />
+          <h2>Erstellt</h2>
+          <CardList items={data.created} />
+          <h2>Beigetreten</h2>
+          <CardList items={data.joined} />
         </>
       )}
     </>

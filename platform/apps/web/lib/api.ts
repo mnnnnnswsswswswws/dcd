@@ -6,14 +6,39 @@ export interface WebConfig {
 const API_BASE_KEY = 'vcp.web.apiBase';
 const TOKEN_KEY = 'vcp.web.token';
 
+/**
+ * Standard-API-Basis: kommt für den Launch aus `NEXT_PUBLIC_API_BASE` (zur Build-Zeit
+ * eingebettet). Ohne gesetzte Variable greift der lokale Entwicklungswert. Ein manuell
+ * im Browser hinterlegter Wert (localStorage) hat Vorrang und dient nur zum Testen.
+ */
+const DEFAULT_API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE && process.env.NEXT_PUBLIC_API_BASE.length > 0
+    ? process.env.NEXT_PUBLIC_API_BASE
+    : 'http://localhost:8080';
+
+/** True, wenn die API-Basis fest per Umgebungsvariable vorgegeben ist (Launch-Betrieb). */
+export const API_BASE_IS_FIXED = Boolean(
+  process.env.NEXT_PUBLIC_API_BASE && process.env.NEXT_PUBLIC_API_BASE.length > 0,
+);
+
 export function getConfig(): WebConfig {
   if (typeof window === 'undefined') {
-    return { apiBase: 'http://localhost:8080', token: '' };
+    return { apiBase: DEFAULT_API_BASE, token: '' };
   }
   return {
-    apiBase: window.localStorage.getItem(API_BASE_KEY) ?? 'http://localhost:8080',
+    apiBase: window.localStorage.getItem(API_BASE_KEY) ?? DEFAULT_API_BASE,
     token: window.localStorage.getItem(TOKEN_KEY) ?? '',
   };
+}
+
+export function getToken(): string {
+  if (typeof window === 'undefined') return '';
+  return window.localStorage.getItem(TOKEN_KEY) ?? '';
+}
+
+/** Im Mock-Auth-Setup ist das Token die User-ID; ein Admin-Token ist `admin:<uuid>`. */
+export function myUserId(token = getToken()): string {
+  return token.startsWith('admin:') ? token.slice('admin:'.length) : token;
 }
 
 export function setApiBase(apiBase: string): void {
@@ -26,6 +51,24 @@ export function setToken(token: string): void {
 
 export function clearToken(): void {
   window.localStorage.removeItem(TOKEN_KEY);
+}
+
+/**
+ * Leichte Session-Bus-Abstraktion: die Kopfleiste meldet An-/Abmeldungen, Seiten
+ * abonnieren sie, um ohne Prop-Drilling neu zu laden.
+ */
+const SESSION_EVENT = 'vcp:session';
+
+export function emitSession(): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(SESSION_EVENT));
+  }
+}
+
+export function subscribeSession(cb: () => void): () => void {
+  if (typeof window === 'undefined') return () => {};
+  window.addEventListener(SESSION_EVENT, cb);
+  return () => window.removeEventListener(SESSION_EVENT, cb);
 }
 
 export interface ApiOptions {
@@ -58,6 +101,7 @@ export async function api<T = unknown>(path: string, options: ApiOptions = {}): 
 export async function register(): Promise<string> {
   const user = await api<{ id: string }>('/v1/users', { method: 'POST', body: { isAdult: true }, auth: false });
   setToken(user.id);
+  emitSession();
   return user.id;
 }
 
@@ -84,6 +128,7 @@ export interface Criterion {
 
 export interface ChallengeDetail extends ChallengeSummary {
   description: string | null;
+  creatorId: string;
   occupiedSlots: number;
   criteria: Criterion[];
   winner: { winnerSubmissionId: string | null; decisionSource: string } | null;
@@ -98,6 +143,15 @@ export interface SubmissionRow {
   voteCount: number;
 }
 
+export interface JoinedChallenge extends ChallengeSummary {
+  slotStatus: string;
+}
+
+export interface MyChallenges {
+  created: ChallengeSummary[];
+  joined: JoinedChallenge[];
+}
+
 export interface FeedEntry {
   id: string;
   status: string;
@@ -108,5 +162,41 @@ export interface FeedEntry {
 }
 
 export function euro(cents: number): string {
-  return `${(cents / 100).toFixed(2)} €`;
+  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(cents / 100);
+}
+
+/** Menschenlesbare Beschriftungen der Challenge-Zustände (Launch-taugliches Deutsch). */
+export const STATUS_LABELS: Record<string, string> = {
+  DRAFT: 'Entwurf',
+  PENDING_FUNDING: 'Finanzierung ausstehend',
+  OPEN: 'Offen',
+  FULL: 'Plätze voll',
+  SUBMISSIONS_CLOSED: 'Einsendeschluss',
+  IN_REVIEW: 'In Prüfung',
+  SELECTION: 'Auswahl läuft',
+  WINNER_LOCKED: 'Gewinner steht fest',
+  PAID_OUT: 'Ausgezahlt',
+  CANCELLED: 'Abgebrochen',
+  EXPIRED: 'Abgelaufen',
+};
+
+export function statusLabel(status: string): string {
+  return STATUS_LABELS[status] ?? status;
+}
+
+/** Farbton (CSS-Klasse) je nach Zustand für konsistente Badges. */
+export function statusTone(status: string): 'open' | 'done' | 'warn' | 'neutral' {
+  if (status === 'OPEN' || status === 'FULL') return 'open';
+  if (status === 'WINNER_LOCKED' || status === 'PAID_OUT') return 'done';
+  if (status === 'CANCELLED' || status === 'EXPIRED') return 'warn';
+  return 'neutral';
+}
+
+export const SELECTION_MODE_LABELS: Record<string, string> = {
+  CREATOR_DECIDES: 'Ersteller entscheidet',
+  COMMUNITY_VOTE: 'Community-Voting',
+};
+
+export function selectionModeLabel(mode: string): string {
+  return SELECTION_MODE_LABELS[mode] ?? mode;
 }

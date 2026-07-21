@@ -283,17 +283,34 @@ Freigeben/Ablehnen, Einsendeschluss, Gewinnerwahl, Auszahlung und Abbruch.
 
 ## Web-Frontend (`apps/web`)
 
-Öffentliche Besucher-/Teilnehmer-Oberfläche (Next.js 14). Registrieren mit 18+-Gate
-(die zurückgegebene ID dient als Bearer-Token), offene Challenges + Feed durchstöbern,
-einer Challenge beitreten, Einsendung abgeben und für Einsendungen abstimmen.
+Öffentliche Teilnehmer-/Ersteller-Oberfläche (Next.js 14, App Router), **mobile-first**
+und Launch-tauglich gestaltet (globale Kopfleiste mit Navigation + Session, farbcodierte
+Status-Badges, Slot-Fortschritt, Dark-Mode über `color-scheme`). Der komplette
+Nutzer-Weg ohne Admin:
+
+- **Registrieren** mit 18+-Gate (die zurückgegebene ID dient als Bearer-Token).
+- **Entdecken:** offene Challenges + optionaler Gewinner-Feed (`GET /v1/feed`, hinter Flag).
+- **Erstellen:** Titel/Beschreibung/Kategorie/Preisgeld/Auswahlmodus/Frist; danach klarer
+  Hinweis, dass die Veröffentlichung **allein** an der per Webhook bestätigten
+  Vollfinanzierung hängt (keine Client-Erfolgsmeldung).
+- **Teilnehmen:** beitreten, In-App-Beweis einreichen; eigener Slot-/Einsendungsstatus wird
+  angezeigt (`GET /v1/users/me/challenges`).
+- **Ersteller-Selfservice** direkt in der Web-App: Einsendeschluss setzen, Gewinner festlegen
+  (bei `CREATOR_DECIDES` per Auswahl unter freigegebenen Einsendungen; bei `COMMUNITY_VOTE`
+  aus den Stimmen ermittelt) und Abbrechen. Moderation und Auszahlung bleiben bewusst dem
+  Admin-Bereich vorbehalten.
+- **Community-Voting** für freigegebene Einsendungen.
 
 ```sh
 pnpm --filter @vcp/web dev       # http://localhost:3001
 pnpm --filter @vcp/web build     # Produktions-Build
 ```
 
-Beide Frontends sprechen ausschließlich die API; ihre Origins müssen in `CORS_ORIGINS`
-freigegeben sein (lokal z. B. `http://localhost:3000,http://localhost:3001`).
+Beide Frontends sprechen ausschließlich die API. Die API-Basis wird für den Launch per
+`NEXT_PUBLIC_API_BASE` (Build-Zeit) gesetzt; ohne Vorgabe greift `http://localhost:8080`,
+und das Web-Frontend erlaubt zusätzlich eine manuelle Override (localStorage) zum Testen.
+Die Frontend-Origins müssen in `CORS_ORIGINS` der API freigegeben sein (lokal z. B.
+`http://localhost:3000,http://localhost:3001`).
 
 ## Provider-Auswahl (Auth & Payments)
 

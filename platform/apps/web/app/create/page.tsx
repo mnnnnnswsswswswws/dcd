@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { api, euro, getConfig } from '../../lib/api';
-import { AccountBar } from '../account-bar';
+import { api, euro, getToken, selectionModeLabel, subscribeSession } from '../../lib/api';
 
 interface CreatedResult {
   challenge: { id: string; status: string; prizeAmountCents: number };
@@ -31,7 +30,9 @@ export default function CreatePage() {
 
   useEffect(() => {
     setDeadline(defaultDeadline());
-    setLoggedIn(Boolean(getConfig().token));
+    const sync = () => setLoggedIn(Boolean(getToken()));
+    sync();
+    return subscribeSession(sync);
   }, []);
 
   async function submit() {
@@ -62,40 +63,47 @@ export default function CreatePage() {
         <Link href="/">← Alle Challenges</Link>
       </p>
       <h1>Challenge erstellen</h1>
-      <AccountBar onChange={() => setLoggedIn(Boolean(getConfig().token))} />
 
-      {!loggedIn && <p className="muted">Bitte oben registrieren, um eine Challenge zu erstellen.</p>}
+      {!loggedIn && (
+        <div className="note">Bitte oben rechts registrieren (18+), um eine Challenge zu erstellen.</div>
+      )}
       {error && <p className="error">Fehler: {error}</p>}
 
       {loggedIn && !result && (
-        <div className="card grid" style={{ maxWidth: 460 }}>
+        <div className="card stack">
           <label>
             Titel
             <input maxLength={80} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="z. B. Bester Freiwurf" />
           </label>
           <label>
             Beschreibung
-            <input maxLength={2000} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Worum geht es?" />
+            <textarea maxLength={2000} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Worum geht es? Was zählt als gültiger Beweis?" />
           </label>
           <label>
             Kategorie
-            <input maxLength={80} value={category} onChange={(e) => setCategory(e.target.value)} placeholder="z. B. Sport und Skills" />
+            <input maxLength={80} value={category} onChange={(e) => setCategory(e.target.value)} placeholder="z. B. Sport & Skills" />
           </label>
-          <label>
-            Preisgeld (EUR)
-            <input type="number" min="1" step="1" value={prizeEuro} onChange={(e) => setPrizeEuro(e.target.value)} />
-          </label>
-          <label>
-            Auswahlmodus
-            <select value={mode} onChange={(e) => setMode(e.target.value)}>
-              <option value="CREATOR_DECIDES">Ersteller entscheidet</option>
-              <option value="COMMUNITY_VOTE">Community-Voting</option>
-            </select>
-          </label>
+          <div className="row" style={{ gap: 12 }}>
+            <label style={{ flex: '1 1 140px' }}>
+              Preisgeld (EUR)
+              <input type="number" min="1" step="1" value={prizeEuro} onChange={(e) => setPrizeEuro(e.target.value)} />
+            </label>
+            <label style={{ flex: '1 1 180px' }}>
+              Auswahlmodus
+              <select value={mode} onChange={(e) => setMode(e.target.value)}>
+                <option value="CREATOR_DECIDES">{selectionModeLabel('CREATOR_DECIDES')}</option>
+                <option value="COMMUNITY_VOTE">{selectionModeLabel('COMMUNITY_VOTE')}</option>
+              </select>
+            </label>
+          </div>
           <label>
             Einsendeschluss
             <input type="datetime-local" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
           </label>
+          <p className="muted" style={{ fontSize: '0.82rem', margin: 0 }}>
+            Der Auswahlmodus wird jetzt festgelegt und ist später unveränderlich. Die Challenge wird erst
+            veröffentlicht, wenn das Preisgeld vollständig bezahlt ist.
+          </p>
           <button className="primary" onClick={submit} disabled={busy || title.trim().length === 0}>
             {busy ? 'Erstelle…' : 'Challenge erstellen'}
           </button>
@@ -103,19 +111,21 @@ export default function CreatePage() {
       )}
 
       {result && (
-        <div className="card">
-          <p>
-            <strong>Erstellt</strong> — Status <span className="badge">{result.challenge.status}</span>,
-            Preisgeld {euro(result.challenge.prizeAmountCents)}.
-          </p>
-          <p className="muted">
-            Vollfinanzierung ausstehend. Zahlungs-Referenz: <code>{result.funding.providerRef}</code>
-            <br />
-            Client-Secret (für die Bezahlung, später via Stripe.js): <code>{result.funding.clientSecret}</code>
-          </p>
-          <p className="muted">
-            Sobald die Zahlung per Webhook bestätigt ist, wird die Challenge veröffentlicht.
-          </p>
+        <div className="card stack">
+          <div className="row between">
+            <strong>Challenge erstellt</strong>
+            <span className="prize">{euro(result.challenge.prizeAmountCents)}</span>
+          </div>
+          <span className="badge">Finanzierung ausstehend</span>
+          <div className="note">
+            Als Nächstes wird das Preisgeld bezahlt. Erst wenn die Zahlung per Webhook bestätigt ist, geht die
+            Challenge automatisch öffentlich — eine Erfolgsmeldung im Browser genügt bewusst nicht.
+            <div style={{ marginTop: 8 }}>
+              Zahlungs-Referenz: <code>{result.funding.providerRef}</code>
+              <br />
+              Client-Secret (später via Stripe.js): <code>{result.funding.clientSecret}</code>
+            </div>
+          </div>
           <Link href={`/challenges/${result.challenge.id}`}>Zur Challenge →</Link>
         </div>
       )}
