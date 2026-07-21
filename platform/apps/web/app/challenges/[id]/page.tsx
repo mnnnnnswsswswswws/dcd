@@ -14,9 +14,11 @@ import {
   subscribeSession,
   type ChallengeDetail,
   type MyChallenges,
+  type PublicConfig,
   type SubmissionRow,
 } from '../../../lib/api';
 import { ReportButton } from '../../report-button';
+import { EvidenceRecorder } from '../../evidence-recorder';
 
 const TERMINAL = new Set(['WINNER_LOCKED', 'PAID_OUT', 'CANCELLED', 'EXPIRED']);
 const SELECTABLE = new Set(['SUBMISSIONS_CLOSED', 'IN_REVIEW', 'SELECTION']);
@@ -34,6 +36,8 @@ export default function ChallengePage() {
   const [slotStatus, setSlotStatus] = useState<string | null>(null);
   const [token, setTokenState] = useState('');
   const [selectedWinner, setSelectedWinner] = useState('');
+  const [captureEnabled, setCaptureEnabled] = useState(false);
+  const [recording, setRecording] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -46,6 +50,12 @@ export default function ChallengePage() {
       setChallenge(await api<ChallengeDetail>(`/v1/challenges/${id}`, { auth: false }));
     } catch (e) {
       setError((e as Error).message);
+    }
+    try {
+      const cfg = await api<PublicConfig>('/v1/config', { auth: false });
+      setCaptureEnabled(cfg.longCaptureEnabled);
+    } catch {
+      setCaptureEnabled(false);
     }
     if (t) {
       try {
@@ -182,7 +192,16 @@ export default function ChallengePage() {
                 <button className="primary" disabled={busy || !canJoin} onClick={() => act('Beigetreten', () => api(`/v1/challenges/${id}/join`, { method: 'POST' }))}>
                   Beitreten
                 </button>
-                <button disabled={busy || !canSubmit} onClick={() => act('Eingereicht', () => api(`/v1/challenges/${id}/submit`, { method: 'POST' }))}>
+                <button
+                  disabled={busy || !canSubmit || recording}
+                  onClick={() => {
+                    if (captureEnabled) {
+                      setRecording(true);
+                    } else {
+                      void act('Eingereicht', () => api(`/v1/challenges/${id}/submit`, { method: 'POST' }));
+                    }
+                  }}
+                >
                   Beweis einreichen
                 </button>
               </div>
@@ -190,6 +209,18 @@ export default function ChallengePage() {
                 Beweise werden ausschließlich in der App aufgenommen — kein Galerie-Import, kein Schnitt.
               </p>
             </div>
+          )}
+
+          {recording && (
+            <EvidenceRecorder
+              challengeId={id}
+              onSubmitted={() => {
+                setRecording(false);
+                setNote('Eingereicht ✓');
+                void load();
+              }}
+              onCancel={() => setRecording(false)}
+            />
           )}
 
           {/* Ersteller-Verwaltung */}

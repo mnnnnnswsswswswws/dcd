@@ -15,6 +15,13 @@ export interface SubmitEntryDeps {
 export interface SubmitEntryInput {
   challengeId: string;
   userId: string;
+  /** Referenz auf die zuvor per Intent erzeugte In-App-Aufnahme. */
+  evidenceRef?: string;
+  /**
+   * Erzwingt einen gültigen `evidenceRef` (Flag LONG_CAPTURE_ENABLED). Ist die
+   * In-App-Aufnahme deaktiviert, bleibt es beim bisherigen Stub-Verhalten.
+   */
+  requireEvidence?: boolean;
 }
 
 export interface SubmitEntryResult {
@@ -42,7 +49,11 @@ export async function submitEntry(
   input: SubmitEntryInput,
 ): Promise<SubmitEntryResult> {
   const now = deps.now?.() ?? new Date();
-  const { challengeId, userId } = input;
+  const { challengeId, userId, evidenceRef, requireEvidence } = input;
+
+  if (requireEvidence === true && (evidenceRef === undefined || evidenceRef === '')) {
+    throw apiError('EVIDENCE_REQUIRED');
+  }
 
   const submissionId = await deps.prisma.$transaction(
     async (tx) => {
@@ -78,8 +89,25 @@ export async function submitEntry(
         throw apiError('ALREADY_SUBMITTED');
       }
 
+      // In-App-Beweis binden, falls mitgegeben. Der Ref muss zu genau dieser
+      // Teilnahme gehören und noch nicht an eine Einsendung gebunden sein.
+      let boundEvidenceRef: string | null = null;
+      if (evidenceRef !== undefined && evidenceRef !== '') {
+        const asset = await tx.evidenceAsset.findUnique({ where: { id: evidenceRef } });
+        if (
+          asset === null ||
+          asset.challengeId !== challengeId ||
+          asset.participantId !== userId ||
+          asset.status === 'ATTACHED'
+        ) {
+          throw apiError('EVIDENCE_INVALID');
+        }
+        await tx.evidenceAsset.update({ where: { id: asset.id }, data: { status: 'ATTACHED' } });
+        boundEvidenceRef = asset.id;
+      }
+
       const submission = await tx.submission.create({
-        data: { challengeId, participantId: userId, status: 'SUBMITTED' },
+        data: { challengeId, participantId: userId, status: 'SUBMITTED', evidenceRef: boundEvidenceRef },
       });
       // Slot spiegelt die Einreichung.
       await tx.slot.update({ where: { id: slot.id }, data: { status: 'SUBMITTED' } });

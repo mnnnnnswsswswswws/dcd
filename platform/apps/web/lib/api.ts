@@ -165,6 +165,18 @@ export function euro(cents: number): string {
   return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(cents / 100);
 }
 
+export interface PublicConfig {
+  longCaptureEnabled: boolean;
+  publicFeedEnabled: boolean;
+  payoutsEnabled: boolean;
+}
+
+export interface EvidenceIntent {
+  evidenceRef: string;
+  uploadUrl: string;
+  expiresAt: string;
+}
+
 /** Menschenlesbare Beschriftungen der Challenge-Zustände (Launch-taugliches Deutsch). */
 export const STATUS_LABELS: Record<string, string> = {
   DRAFT: 'Entwurf',

@@ -86,6 +86,13 @@ enum ReportPriority {
   HIGH
 }
 
+enum EvidenceStatus {
+  PENDING
+  UPLOADED
+  ATTACHED
+  EXPIRED
+}
+
 model User {
   id        String   @id @default(uuid()) @db.Uuid
   isAdult   Boolean  @default(false) @map("is_adult")
@@ -96,6 +103,7 @@ model User {
   submissions       Submission[]
   votes             Vote[]
   reports           Report[]
+  evidence          EvidenceAsset[]
 
   @@map("users")
 }
@@ -119,6 +127,7 @@ model Challenge {
   submissions Submission[]
   votes       Vote[]
   criteria    ChallengeCriterion[]
+  evidence    EvidenceAsset[]
   decision    WinnerDecision?
   funding     ChallengeFunding?
   payout      Payout?
@@ -246,6 +255,7 @@ model Submission {
   participantId String           @map("participant_id") @db.Uuid
   status        SubmissionStatus @default(DRAFT)
   finalizedAt   DateTime?        @map("finalized_at") @db.Timestamptz(6)
+  evidenceRef   String?          @map("evidence_ref") @db.Uuid
   createdAt     DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -257,6 +267,27 @@ model Submission {
   @@unique([challengeId, participantId])
   @@index([challengeId, status])
   @@map("submissions")
+}
+
+/// In-App aufgenommener Beweis (Spec: In-App-Beweisaufnahme ohne Galerieimport/Schnitt).
+/// Ein Datensatz entsteht ausschließlich über die Capture-Intent-API — der Ref ist damit
+/// der Nachweis der In-App-Herkunft. Beim Einreichen wird er an die Einsendung gebunden.
+model EvidenceAsset {
+  id            String         @id @default(uuid()) @db.Uuid
+  challengeId   String         @map("challenge_id") @db.Uuid
+  participantId String         @map("participant_id") @db.Uuid
+  storageKey    String         @map("storage_key")
+  status        EvidenceStatus @default(PENDING)
+  capturedInApp Boolean        @default(true) @map("captured_in_app")
+  durationMs    Int?           @map("duration_ms")
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  challenge   Challenge @relation(fields: [challengeId], references: [id])
+  participant User      @relation(fields: [participantId], references: [id])
+
+  @@index([challengeId, participantId])
+  @@map("evidence_assets")
 }
 
 model Vote {

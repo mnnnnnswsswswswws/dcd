@@ -19,6 +19,10 @@ export type {
   ConfirmFundingResult,
 } from './funding/confirm-funding.js';
 export { submitEntry } from './submissions/submit-entry.js';
+export { createEvidenceIntent } from './submissions/create-evidence-intent.js';
+export type { CreateEvidenceIntentResult } from './submissions/create-evidence-intent.js';
+export { MockEvidenceStorageProvider } from './storage/mock-storage-provider.js';
+export type { EvidenceStorageProvider } from './storage/storage-provider.js';
 export { moderateSubmission } from './submissions/moderate-submission.js';
 export { castVote } from './submissions/cast-vote.js';
 export { closeSubmissions } from './challenges/close-submissions.js';

@@ -6,6 +6,7 @@ import { PrismaModule } from './prisma/prisma.module.js';
 import { EventsModule } from './events/events.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { PaymentsModule } from './payments/payments.module.js';
+import { StorageModule } from './storage/storage.module.js';
 import { ChallengesModule } from './challenges/challenges.module.js';
 import { SubmissionsModule } from './submissions/submissions.module.js';
 import { UsersModule } from './users/users.module.js';
@@ -13,6 +14,7 @@ import { FeedModule } from './feed/feed.module.js';
 import { ReportsModule } from './reports/reports.module.js';
 import { WebhooksModule } from './webhooks/webhooks.module.js';
 import { HealthController } from './health/health.controller.js';
+import { ConfigController } from './config/config.controller.js';
 
 @Module({
   imports: [
@@ -25,6 +27,7 @@ import { HealthController } from './health/health.controller.js';
     EventsModule,
     AuthModule,
     PaymentsModule,
+    StorageModule,
     UsersModule,
     ChallengesModule,
     SubmissionsModule,
@@ -32,7 +35,7 @@ import { HealthController } from './health/health.controller.js';
     ReportsModule,
     WebhooksModule,
   ],
-  controllers: [HealthController],
+  controllers: [HealthController, ConfigController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

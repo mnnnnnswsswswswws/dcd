@@ -15,6 +15,9 @@ import type { PaymentProvider } from '@vcp/payments';
 import { ChallengeStatus } from '@vcp/domain';
 import { apiError } from '@vcp/contracts';
 import { loadEnv } from '@vcp/config';
+import type { EvidenceStorageProvider } from '../storage/storage-provider.js';
+import { EVIDENCE_STORAGE } from '../storage/storage.module.js';
+import { createEvidenceIntent } from '../submissions/create-evidence-intent.js';
 import type { EventPublisher } from '../events/event-publisher.js';
 import { EVENT_PUBLISHER } from '../events/events.module.js';
 import { PAYMENT_PROVIDER } from '../payments/payments.module.js';
@@ -39,11 +42,13 @@ export class ChallengesController {
   // @Inject explizit, damit die DI auch unter Transpilern ohne
   // emitDecoratorMetadata (esbuild/tsx) funktioniert, nicht nur unter SWC.
   private readonly payoutsEnabled = loadEnv().PAYOUTS_ENABLED;
+  private readonly longCaptureEnabled = loadEnv().LONG_CAPTURE_ENABLED;
 
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(EVENT_PUBLISHER) private readonly events: EventPublisher,
     @Inject(PAYMENT_PROVIDER) private readonly payments: PaymentProvider,
+    @Inject(EVIDENCE_STORAGE) private readonly storage: EvidenceStorageProvider,
   ) {}
 
   private get deps() {
@@ -154,15 +159,45 @@ export class ChallengesController {
     return joinChallenge(this.deps, { challengeId: id, userId });
   }
 
-  /** Reicht die Einsendung des Teilnehmers ein (Stub ohne echtes Video). */
+  /**
+   * Erzeugt eine Upload-Absicht für die In-App-Beweisaufnahme. Nur verfügbar, wenn
+   * `LONG_CAPTURE_ENABLED` gesetzt ist — sonst existiert der Endpunkt schlicht nicht (404).
+   */
+  @Post(':id/evidence-intent')
+  @HttpCode(201)
+  @UseGuards(AuthGuard)
+  async evidenceIntent(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @CurrentUserId() userId: string,
+    @Body() body: { contentType?: string },
+  ) {
+    if (!this.longCaptureEnabled) {
+      throw new NotFoundException('Die In-App-Aufnahme ist nicht aktiviert.');
+    }
+    return createEvidenceIntent(
+      { prisma: this.prisma, storage: this.storage },
+      { challengeId: id, userId, contentType: body?.contentType },
+    );
+  }
+
+  /**
+   * Reicht die Einsendung des Teilnehmers ein. Bei aktivierter In-App-Aufnahme
+   * (`LONG_CAPTURE_ENABLED`) ist ein gültiger `evidenceRef` erforderlich; sonst Stub.
+   */
   @Post(':id/submit')
   @HttpCode(201)
   @UseGuards(AuthGuard)
   async submit(
     @Param('id', new ParseUUIDPipe()) id: string,
     @CurrentUserId() userId: string,
+    @Body() body: { evidenceRef?: string },
   ) {
-    return submitEntry(this.deps, { challengeId: id, userId });
+    return submitEntry(this.deps, {
+      challengeId: id,
+      userId,
+      evidenceRef: body?.evidenceRef,
+      requireEvidence: this.longCaptureEnabled,
+    });
   }
 
   /** Zählt eine Community-Stimme für eine Einsendung. */
