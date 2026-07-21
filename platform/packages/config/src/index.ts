@@ -35,6 +35,19 @@ const baseSchema = z.object({
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
 
+  // Evidence-Storage: "mock" (kein Netzwerk) oder "s3" (S3-kompatibel: AWS S3,
+  // Cloudflare R2, MinIO, Backblaze B2 …) via presignter PUT-URL.
+  STORAGE_PROVIDER: z.enum(['mock', 's3']).default('mock'),
+  STORAGE_S3_ENDPOINT: z.string().url().optional(),
+  STORAGE_S3_REGION: z.string().optional(),
+  STORAGE_S3_BUCKET: z.string().optional(),
+  STORAGE_S3_ACCESS_KEY_ID: z.string().optional(),
+  STORAGE_S3_SECRET_ACCESS_KEY: z.string().optional(),
+  /** Erzwingt Path-Style-URLs (MinIO/manche R2-Setups). Default host-style. */
+  STORAGE_S3_FORCE_PATH_STYLE: booleanFromEnv,
+  /** Gültigkeit der presignten Upload-URL in Sekunden. */
+  STORAGE_S3_UPLOAD_TTL_S: z.coerce.number().int().positive().default(900),
+
   REAL_MONEY_ENABLED: booleanFromEnv,
   STRIPE_LIVE_MODE: booleanFromEnv,
   PAYOUTS_ENABLED: booleanFromEnv,
@@ -74,6 +87,25 @@ export const envSchema = baseSchema.superRefine((env, ctx) => {
       path: ['STRIPE_SECRET_KEY'],
       message: 'PAYMENTS_PROVIDER=stripe erfordert STRIPE_SECRET_KEY.',
     });
+  }
+  // S3-Storage braucht Endpoint, Bucket, Region und Credentials.
+  if (env.STORAGE_PROVIDER === 's3') {
+    const required: [keyof typeof env, string][] = [
+      ['STORAGE_S3_ENDPOINT', env.STORAGE_S3_ENDPOINT ?? ''],
+      ['STORAGE_S3_REGION', env.STORAGE_S3_REGION ?? ''],
+      ['STORAGE_S3_BUCKET', env.STORAGE_S3_BUCKET ?? ''],
+      ['STORAGE_S3_ACCESS_KEY_ID', env.STORAGE_S3_ACCESS_KEY_ID ?? ''],
+      ['STORAGE_S3_SECRET_ACCESS_KEY', env.STORAGE_S3_SECRET_ACCESS_KEY ?? ''],
+    ];
+    for (const [key, value] of required) {
+      if (value.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [key],
+          message: `STORAGE_PROVIDER=s3 erfordert ${key}.`,
+        });
+      }
+    }
   }
   // In Produktion dürfen keine Default-/Platzhalter-Secrets verwendet werden.
   if (env.NODE_ENV === 'production') {

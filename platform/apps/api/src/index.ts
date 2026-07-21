@@ -22,6 +22,8 @@ export { submitEntry } from './submissions/submit-entry.js';
 export { createEvidenceIntent } from './submissions/create-evidence-intent.js';
 export type { CreateEvidenceIntentResult } from './submissions/create-evidence-intent.js';
 export { MockEvidenceStorageProvider } from './storage/mock-storage-provider.js';
+export { S3EvidenceStorageProvider } from './storage/s3-storage-provider.js';
+export { presignS3PutUrl, encodeS3Key, encodeRfc3986 } from './storage/s3-presign.js';
 export type { EvidenceStorageProvider } from './storage/storage-provider.js';
 export { moderateSubmission } from './submissions/moderate-submission.js';
 export { castVote } from './submissions/cast-vote.js';

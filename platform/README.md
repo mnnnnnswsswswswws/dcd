@@ -42,11 +42,13 @@ keine Echtgeld-Produktion, solange Flags `false` (Factory wirft hart).
 
 **In-App-Beweisaufnahme (Kernregel) — umgesetzt hinter `LONG_CAPTURE_ENABLED`:**
 Capture-Intent-API (`POST /v1/challenges/:id/evidence-intent`) + `evidence_assets`-Tabelle
-+ `EvidenceStorageProvider`-Abstraktion (Mock-Default, GCS/S3 steckbar) + Web-Recorder
-(`getUserMedia`/`MediaRecorder`, **ohne** Datei-Upload-Feld). Bei aktivem Flag ist ein
-gültiger, zur Teilnahme gehörender `evidenceRef` Pflicht — es gibt keinen Pfad, der eine
-beliebige Datei akzeptiert (kein Galerieimport). Ohne Flag bleibt es beim bisherigen Stub.
-Echtes Transcoding/Overlay/Hash-Kette bleibt der externen Medienpipeline vorbehalten.
++ `EvidenceStorageProvider`-Abstraktion (Mock-Default **plus S3-kompatibler Provider mit
+presignter PUT-URL**, `STORAGE_PROVIDER=s3`) + In-App-Recorder in Web (`getUserMedia`/
+`MediaRecorder`) und Mobile (`expo-camera`), jeweils **ohne** Datei-/Galeriezugriff. Bei
+aktivem Flag ist ein gültiger, zur Teilnahme gehörender `evidenceRef` Pflicht — es gibt
+keinen Pfad, der eine beliebige Datei akzeptiert (kein Galerieimport). Ohne Flag bleibt es
+beim bisherigen Stub. Echtes Transcoding/Overlay/Hash-Kette bleibt der externen
+Medienpipeline vorbehalten.
 
 **Moderations-Loop in der UI:** Melden (`POST /v1/reports`) im Web, priorisierte
 Admin-Queue mit Statuswechsel (`PATCH /v1/reports/:id`, terminale Zustände) im Admin.
@@ -351,10 +353,16 @@ Env, Default ist jeweils der Mock (kein Netzwerk/keine Credentials):
 - `PAYMENTS_PROVIDER=mock|stripe` — `stripe` bindet `StripePaymentProvider`
   (PaymentIntents, idempotent) und `StripeWebhookVerifier` (Signaturprüfung über den
   Raw-Body) und braucht `STRIPE_SECRET_KEY` (+ `STRIPE_WEBHOOK_SECRET` für Webhooks).
+- `STORAGE_PROVIDER=mock|s3` — Evidence-Storage der In-App-Aufnahme. `s3` bindet den
+  `S3EvidenceStorageProvider`, der eine **presignte PUT-URL** (AWS Signature V4,
+  handgeschrieben über `node:crypto`, **ohne SDK**) liefert; die App lädt die Aufnahme
+  direkt in den Bucket. S3-kompatibel (AWS S3, Cloudflare R2, MinIO, Backblaze B2) via
+  `STORAGE_S3_ENDPOINT/REGION/BUCKET/ACCESS_KEY_ID/SECRET_ACCESS_KEY`
+  (`STORAGE_S3_FORCE_PATH_STYLE` für MinIO). Die SigV4-Signatur ist per
+  offiziellem AWS-Known-Answer-Test verifiziert.
 
-Beide echten Provider laden ihre SDKs **lazy** — Mock-Betrieb und Tests brauchen sie
-nicht. Live-Betrieb erfordert nur, die jeweiligen Secrets als Umgebungsvariablen zu
-hinterlegen.
+Auth und Zahlungen laden ihre SDKs **lazy** — Mock-Betrieb und Tests brauchen sie nicht.
+Live-Betrieb erfordert nur, die jeweiligen Secrets als Umgebungsvariablen zu hinterlegen.
 
 ## CI
 
