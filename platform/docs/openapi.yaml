@@ -237,14 +237,55 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
 
+  /v1/challenges/{id}/evidence-intent:
+    post:
+      tags: [Submissions]
+      summary: Upload-Absicht für die In-App-Beweisaufnahme (Flag LONG_CAPTURE_ENABLED)
+      description: >-
+        Nur verfügbar, wenn LONG_CAPTURE_ENABLED gesetzt ist (sonst 404). Legt einen
+        PENDING-Beweis an und liefert den evidenceRef samt Upload-Ziel. Der Ref ist der
+        einzige Weg zu einer gültigen Beweis-Einsendung (kein Galerieimport).
+      security: [{ bearerAuth: [] }]
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { contentType: { type: string, example: video/webm } }
+      responses:
+        '201':
+          description: Upload-Absicht erstellt
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  evidenceRef: { type: string, format: uuid }
+                  uploadUrl: { type: string }
+                  expiresAt: { type: string, format: date-time }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+
   /v1/challenges/{id}/submit:
     post:
       tags: [Submissions]
-      summary: Einsendung abgeben (Stub)
+      summary: Einsendung abgeben
+      description: >-
+        Bei aktivierter In-App-Aufnahme (LONG_CAPTURE_ENABLED) ist ein gültiger
+        evidenceRef aus /evidence-intent erforderlich; sonst Stub ohne Beweis.
       security: [{ bearerAuth: [] }]
       parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { evidenceRef: { type: string, format: uuid } }
       responses:
         '201': { description: Eingereicht }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
 
@@ -382,6 +423,47 @@ paths:
       responses:
         '200': { description: Meldungen (nach Priorität) }
         '403': { $ref: '#/components/responses/ErrorResponse' }
+
+  /v1/reports/{id}:
+    patch:
+      tags: [Safety]
+      summary: Bearbeitungsstatus einer Meldung setzen (Admin)
+      description: >-
+        Übergänge folgen der Domänenmatrix (OPEN → REVIEWING → RESOLVED/DISMISSED);
+        RESOLVED/DISMISSED sind terminal.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { type: string, enum: [OPEN, REVIEWING, RESOLVED, DISMISSED] }
+              required: [status]
+      responses:
+        '200': { description: Neuer Status }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '404': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+
+  /v1/config:
+    get:
+      tags: [System]
+      summary: Öffentliche Laufzeit-Konfiguration (Feature-Flags) für die Frontends
+      responses:
+        '200':
+          description: Unkritische Feature-Flags (keine Secrets)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  longCaptureEnabled: { type: boolean }
+                  publicFeedEnabled: { type: boolean }
+                  payoutsEnabled: { type: boolean }
 
   /v1/webhooks/payments:
     post:

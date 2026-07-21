@@ -32,7 +32,7 @@ keine Echtgeld-Produktion, solange Flags `false` (Factory wirft hart).
 | 1 | Monorepo (pnpm + Turborepo) | ✅ |
 | 2 | apps: api / admin-web / workers / mobile | ⚠️ api+admin+web ✅, Worker als Runner in `apps/api` (noch nicht `apps/workers`), **mobile (Expo) fehlt** |
 | 3 | TypeScript, Tests, Env-Validierung / Linting | ✅ TS/Tests/Zod-Env/ESLint (Flat-Config, in CI) |
-| 4 | Vollständiges Prisma-Modell + erste Migration | ⚠️ Kernmodelle + `audit_logs`/`ledger_entries`/`votes`/`payouts`/`challenge_criteria`/`reports`; **fehlend:** profiles, capture_sessions, media_assets, transfers, connected_accounts, moderation_cases, comments/likes/follows, notifications |
+| 4 | Vollständiges Prisma-Modell + erste Migration | ⚠️ Kernmodelle + `audit_logs`/`ledger_entries`/`votes`/`payouts`/`challenge_criteria`/`reports`/`evidence_assets`; **fehlend:** profiles, transfers, connected_accounts, moderation_cases, comments/likes/follows, notifications |
 | 5 | Firebase-Auth + App-Check | ⚠️ `FirebaseTokenVerifier` (Mock-Default) vorhanden; **App-Check fehlt** |
 | 6 | Challenge-State-Machine | ✅ (Status-Namen weichen vom Dokument ab — s. offene Punkte) |
 | 7 | Transaktionssichere `join`-Logik | ✅ |
@@ -40,14 +40,25 @@ keine Echtgeld-Produktion, solange Flags `false` (Factory wirft hart).
 | 9 | Mock-Payment-Provider | ✅ (+ Stripe-Provider-Code, per Env wählbar) |
 | 10 | README-Dokumentation | ✅ (dieses Dokument) |
 
+**In-App-Beweisaufnahme (Kernregel) — umgesetzt hinter `LONG_CAPTURE_ENABLED`:**
+Capture-Intent-API (`POST /v1/challenges/:id/evidence-intent`) + `evidence_assets`-Tabelle
++ `EvidenceStorageProvider`-Abstraktion (Mock-Default, GCS/S3 steckbar) + Web-Recorder
+(`getUserMedia`/`MediaRecorder`, **ohne** Datei-Upload-Feld). Bei aktivem Flag ist ein
+gültiger, zur Teilnahme gehörender `evidenceRef` Pflicht — es gibt keinen Pfad, der eine
+beliebige Datei akzeptiert (kein Galerieimport). Ohne Flag bleibt es beim bisherigen Stub.
+Echtes Transcoding/Overlay/Hash-Kette bleibt der externen Medienpipeline vorbehalten.
+
+**Moderations-Loop in der UI:** Melden (`POST /v1/reports`) im Web, priorisierte
+Admin-Queue mit Statuswechsel (`PATCH /v1/reports/:id`, terminale Zustände) im Admin.
+
 **Offene Punkte / bewusste Abweichungen:**
 - Status-Namen weichen vom Dokument ab (z. B. `PENDING_FUNDING`/`OPEN`/`WINNER_LOCKED`
   vs. `PAYMENT_PENDING`/`FUNDED`/`JUDGING`/`VOTING`). Regeln/Verhalten identisch;
   Umbenennung ist ein reines Refactoring (auf Wunsch angleichbar).
-- Video-Beweis-Pipeline (Capture Sessions, Overlay, Hash-Kette, Transcoding),
-  Mobile-App, echtes Firebase/App-Check und Stripe-Live erfordern externe Dienste/
-  Credentials — bewusst hinter Interfaces/Flags vorbereitet, aber nicht live.
-- Weitere Spec-Tabellen (Social/Moderation/Payments-Detail) sind noch nicht angelegt.
+- Echtes Firebase/App-Check und Stripe-Live sowie ein echter Medien-Storage (Transcoding,
+  Overlay, Hash-Kette) und die Mobile-App erfordern externe Dienste/Credentials — bewusst
+  hinter Interfaces/Flags vorbereitet, aber nicht live.
+- Weitere Spec-Tabellen (Social/Payments-Detail, moderation_cases) sind noch nicht angelegt.
 
 **Testresultate (in dieser Umgebung real ausgeführt, gegen migrierte PostgreSQL 16):**
 Unit + Integration + e2e grün; Pflicht-Concurrency-Test (50→10), Gewinner-Race
@@ -130,7 +141,8 @@ OpenAPI-3.1-Spezifikation liegt unter [`docs/openapi.yaml`](docs/openapi.yaml).
 | `GET  /v1/users/me/challenges`          | Bearer  | Eigene erstellte + beigetretene Challenges              |
 | `POST /v1/challenges`                   | Bearer  | Challenge erstellen (`PENDING_FUNDING`) + Funding-Absicht |
 | `POST /v1/challenges/:id/join`          | Bearer  | Teilnehmerplatz reservieren (201, sonst 4xx-Code)      |
-| `POST /v1/challenges/:id/submit`        | Bearer  | Einsendung abgeben (Stub)                               |
+| `POST /v1/challenges/:id/evidence-intent` | Bearer | In-App-Aufnahme-Upload anfordern (nur `LONG_CAPTURE_ENABLED`, sonst 404) |
+| `POST /v1/challenges/:id/submit`        | Bearer  | Einsendung abgeben (Beweis-Ref Pflicht bei aktiver Aufnahme, sonst Stub) |
 | `POST /v1/challenges/:id/vote`          | Bearer  | Community-Stimme abgeben                                |
 | `POST /v1/submissions/:id/moderate`     | Admin   | Einsendung freigeben/ablehnen                           |
 | `POST /v1/challenges/:id/close`         | Admin   | Einsendungsphase schließen                              |
@@ -143,7 +155,9 @@ OpenAPI-3.1-Spezifikation liegt unter [`docs/openapi.yaml`](docs/openapi.yaml).
 | `GET  /v1/feed`                         | —       | Öffentlicher Feed entschiedener Challenges (`PUBLIC_FEED_ENABLED`) |
 | `POST /v1/reports`                      | Bearer  | Inhalt/Konto melden (Priorität aus Grund abgeleitet)    |
 | `GET  /v1/reports`                      | Admin   | Moderations-/Meldungs-Queue                             |
+| `PATCH /v1/reports/:id`                 | Admin   | Bearbeitungsstatus setzen (OPEN→REVIEWING→RESOLVED/DISMISSED) |
 | `POST /v1/webhooks/payments`            | Secret/Sig | Vollfinanzierung bestätigen → veröffentlichen (idempotent) |
+| `GET  /v1/config`                       | —       | Öffentliche Feature-Flags für die Frontends (keine Secrets) |
 | `GET  /health`                          | —       | Liveness + DB-Erreichbarkeit                            |
 
 **Admin:** Im Mock-Verifier markiert das Token-Präfix `admin:` (z. B. `Bearer admin:<uuid>`)
