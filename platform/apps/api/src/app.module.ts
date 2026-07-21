@@ -7,6 +7,8 @@ import { EventsModule } from './events/events.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { PaymentsModule } from './payments/payments.module.js';
 import { StorageModule } from './storage/storage.module.js';
+import { AppCheckModule } from './app-check/app-check.module.js';
+import { AppCheckGuard } from './app-check/app-check.guard.js';
 import { ChallengesModule } from './challenges/challenges.module.js';
 import { SubmissionsModule } from './submissions/submissions.module.js';
 import { UsersModule } from './users/users.module.js';
@@ -28,6 +30,7 @@ import { ConfigController } from './config/config.controller.js';
     AuthModule,
     PaymentsModule,
     StorageModule,
+    AppCheckModule,
     UsersModule,
     ChallengesModule,
     SubmissionsModule,
@@ -36,6 +39,10 @@ import { ConfigController } from './config/config.controller.js';
     WebhooksModule,
   ],
   controllers: [HealthController, ConfigController],
-  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
+  providers: [
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    // App-Check läuft als globaler Guard (no-op wenn APP_CHECK_ENABLED aus).
+    { provide: APP_GUARD, useClass: AppCheckGuard },
+  ],
 })
 export class AppModule {}

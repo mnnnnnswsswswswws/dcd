@@ -48,6 +48,10 @@ const baseSchema = z.object({
   /** Gültigkeit der presignten Upload-URL in Sekunden. */
   STORAGE_S3_UPLOAD_TTL_S: z.coerce.number().int().positive().default(900),
 
+  // App-Check: verifiziert, dass Requests von einer echten App-Instanz kommen
+  // (Firebase App Check). Default aus — dann keinerlei Zusatzprüfung.
+  APP_CHECK_ENABLED: booleanFromEnv,
+
   REAL_MONEY_ENABLED: booleanFromEnv,
   STRIPE_LIVE_MODE: booleanFromEnv,
   PAYOUTS_ENABLED: booleanFromEnv,

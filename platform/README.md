@@ -33,7 +33,7 @@ keine Echtgeld-Produktion, solange Flags `false` (Factory wirft hart).
 | 2 | apps: api / admin-web / workers / mobile | ✅ api + admin + web + **mobile (Expo SDK 57)** + `apps/workers` |
 | 3 | TypeScript, Tests, Env-Validierung / Linting | ✅ TS/Tests/Zod-Env/ESLint (Flat-Config, in CI) |
 | 4 | Vollständiges Prisma-Modell + erste Migration | ⚠️ Kernmodelle + `audit_logs`/`ledger_entries`/`votes`/`payouts`/`challenge_criteria`/`reports`/`evidence_assets`; **fehlend:** profiles, transfers, connected_accounts, moderation_cases, comments/likes/follows, notifications |
-| 5 | Firebase-Auth + App-Check | ⚠️ `FirebaseTokenVerifier` (Mock-Default) vorhanden; **App-Check fehlt** |
+| 5 | Firebase-Auth + App-Check | ✅ `FirebaseTokenVerifier` + **App-Check-Guard** (`APP_CHECK_ENABLED`, `x-firebase-appcheck`), je Mock-Default; Live braucht Firebase-Credentials |
 | 6 | Challenge-State-Machine | ✅ (Status-Namen weichen vom Dokument ab — s. offene Punkte) |
 | 7 | Transaktionssichere `join`-Logik | ✅ |
 | 8 | 50-Nutzer-Concurrency-Test → exakt 10 | ✅ grün |
