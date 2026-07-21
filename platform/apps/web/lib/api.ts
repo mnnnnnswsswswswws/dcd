@@ -177,6 +177,25 @@ export interface EvidenceIntent {
   expiresAt: string;
 }
 
+export interface MyProfile {
+  id: string;
+  isAdult: boolean;
+  username: string | null;
+  displayName: string | null;
+  bio: string | null;
+  createdAt: string;
+}
+
+export interface PublicProfile {
+  username: string;
+  displayName: string | null;
+  bio: string | null;
+  joinedAt: string;
+  createdCount: number;
+  participatedCount: number;
+  wonCount: number;
+}
+
 /** Menschenlesbare Beschriftungen der Challenge-Zustände (Launch-taugliches Deutsch). */
 export const STATUS_LABELS: Record<string, string> = {
   DRAFT: 'Entwurf',

@@ -65,6 +65,7 @@ export function TopBar() {
     { href: '/', label: 'Entdecken' },
     { href: '/create', label: 'Erstellen' },
     { href: '/me', label: 'Meine' },
+    { href: '/profile', label: 'Profil' },
   ];
 
   return (

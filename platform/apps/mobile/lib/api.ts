@@ -125,6 +125,15 @@ export interface EvidenceIntent {
   expiresAt: string;
 }
 
+export interface MyProfile {
+  id: string;
+  isAdult: boolean;
+  username: string | null;
+  displayName: string | null;
+  bio: string | null;
+  createdAt: string;
+}
+
 export function euro(cents: number): string {
   return `${(cents / 100).toFixed(2).replace('.', ',')} €`;
 }

@@ -114,6 +114,10 @@ export const ERROR_CODES = {
     httpStatus: 409,
     message: 'Die Aufnahme ist ungültig oder gehört nicht zu deiner Teilnahme.',
   },
+  USERNAME_TAKEN: {
+    httpStatus: 409,
+    message: 'Dieser Nutzername ist bereits vergeben.',
+  },
 } as const satisfies Record<string, ErrorSpec>;
 
 export type ErrorCode = keyof typeof ERROR_CODES;

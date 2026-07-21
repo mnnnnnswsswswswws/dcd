@@ -94,9 +94,12 @@ enum EvidenceStatus {
 }
 
 model User {
-  id        String   @id @default(uuid()) @db.Uuid
-  isAdult   Boolean  @default(false) @map("is_adult")
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id          String   @id @default(uuid()) @db.Uuid
+  isAdult     Boolean  @default(false) @map("is_adult")
+  username    String?  @unique
+  displayName String?  @map("display_name")
+  bio         String?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   createdChallenges Challenge[]  @relation("ChallengeCreator")
   slots             Slot[]

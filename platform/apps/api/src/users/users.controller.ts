@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   Inject,
+  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -15,6 +16,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { AuthGuard } from '../auth/auth.guard.js';
 import { CurrentUserId } from '../auth/current-user.decorator.js';
 import { registerUser } from './register-user.js';
+import { updateProfile, type UpdateProfileInput } from './update-profile.js';
 
 @Controller('v1/users')
 export class UsersController {
@@ -40,12 +42,23 @@ export class UsersController {
   async me(@CurrentUserId() userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, isAdult: true, createdAt: true },
+      select: { id: true, isAdult: true, username: true, displayName: true, bio: true, createdAt: true },
     });
     if (user === null) {
       throw apiError('USER_NOT_FOUND');
     }
     return user;
+  }
+
+  /** Aktualisiert das eigene öffentliche Profil (Nutzername/Anzeigename/Bio). */
+  @Patch('me')
+  @HttpCode(200)
+  @UseGuards(AuthGuard)
+  async updateMe(
+    @CurrentUserId() userId: string,
+    @Body() body: Omit<UpdateProfileInput, 'userId'>,
+  ) {
+    return updateProfile({ prisma: this.prisma }, { ...body, userId });
   }
 
   /** Challenges des Nutzers: selbst erstellt und beigetreten (inkl. Slot-Status). */

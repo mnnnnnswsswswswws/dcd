@@ -46,7 +46,8 @@ export default function DiscoverScreen() {
 
       <Row style={{ marginBottom: 8 }}>
         <Button title="+ Erstellen" variant="primary" onPress={() => router.push('/create')} />
-        <Button title="Meine Challenges" onPress={() => router.push('/me')} />
+        <Button title="Meine" onPress={() => router.push('/me')} />
+        <Button title="Profil" onPress={() => router.push('/profile')} />
       </Row>
 
       {error && <ErrorText>Fehler: {error}</ErrorText>}
