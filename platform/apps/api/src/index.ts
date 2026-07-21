@@ -32,6 +32,8 @@ export { registerUser } from './users/register-user.js';
 export type { RegisterUserResult } from './users/register-user.js';
 export { createReport } from './reports/create-report.js';
 export type { CreateReportResult } from './reports/create-report.js';
+export { updateReport } from './reports/update-report.js';
+export type { UpdateReportResult } from './reports/update-report.js';
 export { expireSlots } from './workers/expire-slots.js';
 export type { ExpireSlotsDeps, ExpireSlotsResult } from './workers/expire-slots.js';
 export { closeExpiredSubmissions } from './workers/close-expired-submissions.js';

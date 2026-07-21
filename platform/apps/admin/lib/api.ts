@@ -93,3 +93,24 @@ export const CHALLENGE_STATUSES = [
 export function euro(cents: number): string {
   return `${(cents / 100).toFixed(2)} €`;
 }
+
+export interface ReportRow {
+  id: string;
+  targetType: string;
+  targetId: string;
+  reason: string;
+  description: string | null;
+  status: string;
+  priority: string;
+  createdAt: string;
+}
+
+export const REPORT_STATUSES = ['OPEN', 'REVIEWING', 'RESOLVED', 'DISMISSED'] as const;
+
+/** Zulässige Folgestatus je aktuellem Status (Spiegel der Domänenmatrix). */
+export const REPORT_NEXT: Record<string, string[]> = {
+  OPEN: ['REVIEWING', 'RESOLVED', 'DISMISSED'],
+  REVIEWING: ['RESOLVED', 'DISMISSED'],
+  RESOLVED: [],
+  DISMISSED: [],
+};

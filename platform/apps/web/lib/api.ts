@@ -200,3 +200,18 @@ export const SELECTION_MODE_LABELS: Record<string, string> = {
 export function selectionModeLabel(mode: string): string {
   return SELECTION_MODE_LABELS[mode] ?? mode;
 }
+
+/** Meldegründe mit deutscher Beschriftung (Reihenfolge = Anzeige, schwere zuerst). */
+export const REPORT_REASONS: { value: string; label: string }[] = [
+  { value: 'MINORS', label: 'Minderjährige' },
+  { value: 'VIOLENCE', label: 'Gewalt' },
+  { value: 'SEXUAL', label: 'Sexueller Inhalt' },
+  { value: 'DANGEROUS', label: 'Gefährliche Handlung' },
+  { value: 'ILLEGAL', label: 'Illegaler Inhalt' },
+  { value: 'HARASSMENT', label: 'Belästigung' },
+  { value: 'FRAUD', label: 'Betrug' },
+  { value: 'COPYRIGHT', label: 'Urheberrecht' },
+  { value: 'PRIVACY', label: 'Privatsphäre' },
+  { value: 'SPAM', label: 'Spam' },
+  { value: 'OTHER', label: 'Sonstiges' },
+];

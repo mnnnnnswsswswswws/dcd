@@ -95,6 +95,17 @@ button:disabled {
   font-size: 0.78rem;
 }
 
+.badge.danger {
+  color: #c92a2a;
+  border-color: #e0a3a3;
+  background: rgba(201, 42, 42, 0.08);
+  font-weight: 700;
+}
+
+.between {
+  justify-content: space-between;
+}
+
 .error {
   color: #c92a2a;
 }

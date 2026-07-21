@@ -16,6 +16,7 @@ import {
   type MyChallenges,
   type SubmissionRow,
 } from '../../../lib/api';
+import { ReportButton } from '../../report-button';
 
 const TERMINAL = new Set(['WINNER_LOCKED', 'PAID_OUT', 'CANCELLED', 'EXPIRED']);
 const SELECTABLE = new Set(['SUBMISSIONS_CLOSED', 'IN_REVIEW', 'SELECTION']);
@@ -269,6 +270,7 @@ export default function ChallengePage() {
                         Abstimmen
                       </button>
                     )}
+                    {loggedIn && !mine && <ReportButton targetType="SUBMISSION" targetId={s.id} disabled={busy} />}
                   </div>
                 </div>
               );

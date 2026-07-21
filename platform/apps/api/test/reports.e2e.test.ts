@@ -72,3 +72,34 @@ describe('GET /v1/reports (Admin-Queue)', () => {
     expect(res.body[0]).toMatchObject({ reason: 'FRAUD', priority: 'MEDIUM', status: 'OPEN' });
   });
 });
+
+describe('PATCH /v1/reports/:id (Statuswechsel)', () => {
+  it('Admin kann eine Meldung bearbeiten und schließen; Nicht-Admin 403', async () => {
+    const reporter = await prisma.user.create({ data: { isAdult: true } });
+    const created = await http()
+      .post('/v1/reports')
+      .set('Authorization', `Bearer ${reporter.id}`)
+      .send({ targetType: 'SUBMISSION', targetId: randomUUID(), reason: 'SPAM' })
+      .expect(201);
+    const reportId: string = created.body.id;
+
+    // Nicht-Admin darf nicht.
+    await http()
+      .patch(`/v1/reports/${reportId}`)
+      .set('Authorization', `Bearer ${reporter.id}`)
+      .send({ status: 'RESOLVED' })
+      .expect(403);
+
+    // Admin: OPEN → REVIEWING → RESOLVED.
+    await http().patch(`/v1/reports/${reportId}`).set('Authorization', `Bearer ${ADMIN}`).send({ status: 'REVIEWING' }).expect(200);
+    const done = await http().patch(`/v1/reports/${reportId}`).set('Authorization', `Bearer ${ADMIN}`).send({ status: 'RESOLVED' }).expect(200);
+    expect(done.body).toMatchObject({ id: reportId, status: 'RESOLVED' });
+
+    // RESOLVED ist terminal → weiterer Wechsel 409.
+    await http().patch(`/v1/reports/${reportId}`).set('Authorization', `Bearer ${ADMIN}`).send({ status: 'DISMISSED' }).expect(409);
+
+    // Queue zeigt die geschlossene Meldung nicht mehr unter OPEN.
+    const open = await http().get('/v1/reports?status=OPEN').set('Authorization', `Bearer ${ADMIN}`).expect(200);
+    expect(open.body).toHaveLength(0);
+  });
+});

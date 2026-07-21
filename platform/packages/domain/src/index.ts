@@ -102,6 +102,21 @@ export type ReportReason = (typeof REPORT_REASONS)[number];
 
 export type ReportPriority = 'LOW' | 'MEDIUM' | 'HIGH';
 
+export const REPORT_STATUSES = ['OPEN', 'REVIEWING', 'RESOLVED', 'DISMISSED'] as const;
+export type ReportStatus = (typeof REPORT_STATUSES)[number];
+
+/** Erlaubte Statusübergänge einer Meldung; RESOLVED/DISMISSED sind terminal. */
+export const REPORT_TRANSITIONS: Readonly<Record<ReportStatus, readonly ReportStatus[]>> = {
+  OPEN: ['REVIEWING', 'RESOLVED', 'DISMISSED'],
+  REVIEWING: ['RESOLVED', 'DISMISSED'],
+  RESOLVED: [],
+  DISMISSED: [],
+};
+
+export function canTransitionReport(from: ReportStatus, to: ReportStatus): boolean {
+  return REPORT_TRANSITIONS[from].includes(to);
+}
+
 const HIGH_PRIORITY_REASONS: readonly ReportReason[] = ['DANGEROUS', 'ILLEGAL', 'VIOLENCE', 'SEXUAL', 'MINORS'];
 const MEDIUM_PRIORITY_REASONS: readonly ReportReason[] = ['HARASSMENT', 'FRAUD', 'PRIVACY'];
 

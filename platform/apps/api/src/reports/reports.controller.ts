@@ -4,6 +4,9 @@ import {
   Get,
   HttpCode,
   Inject,
+  Param,
+  ParseUUIDPipe,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -15,6 +18,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { AuthGuard, type AuthenticatedUser } from '../auth/auth.guard.js';
 import { CurrentUser, CurrentUserId } from '../auth/current-user.decorator.js';
 import { createReport, type CreateReportInput } from './create-report.js';
+import { updateReport } from './update-report.js';
 
 @Controller('v1/reports')
 export class ReportsController {
@@ -60,5 +64,20 @@ export class ReportsController {
         createdAt: true,
       },
     });
+  }
+
+  /** Setzt den Bearbeitungsstatus einer Meldung (nur Admin). */
+  @Patch(':id')
+  @HttpCode(200)
+  @UseGuards(AuthGuard)
+  async update(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() body: { status?: string },
+  ) {
+    return updateReport(
+      { prisma: this.prisma, events: this.events },
+      { reportId: id, status: body.status as never, isAdmin: user.isAdmin },
+    );
   }
 }

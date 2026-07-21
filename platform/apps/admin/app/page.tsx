@@ -30,7 +30,10 @@ export default function DashboardPage() {
 
   return (
     <>
-      <h1>Video-Challenge Admin</h1>
+      <div className="row between">
+        <h1>Video-Challenge Admin</h1>
+        <Link href="/reports">Meldungen →</Link>
+      </div>
       <SettingsBar onChange={load} />
 
       <div className="row" style={{ marginBottom: 12 }}>

@@ -98,6 +98,22 @@ export const ERROR_CODES = {
     httpStatus: 403,
     message: 'Diese Aktion ist dir nicht gestattet.',
   },
+  REPORT_NOT_FOUND: {
+    httpStatus: 404,
+    message: 'Diese Meldung existiert nicht.',
+  },
+  REPORT_INVALID_STATE: {
+    httpStatus: 409,
+    message: 'Dieser Statuswechsel der Meldung ist nicht möglich.',
+  },
+  EVIDENCE_REQUIRED: {
+    httpStatus: 400,
+    message: 'Für die Einsendung ist eine in der App aufgenommene Aufnahme erforderlich.',
+  },
+  EVIDENCE_INVALID: {
+    httpStatus: 409,
+    message: 'Die Aufnahme ist ungültig oder gehört nicht zu deiner Teilnahme.',
+  },
 } as const satisfies Record<string, ErrorSpec>;
 
 export type ErrorCode = keyof typeof ERROR_CODES;
