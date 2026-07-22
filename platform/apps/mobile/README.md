@@ -43,6 +43,39 @@ Native Builds laufen über EAS (`eas build`) außerhalb dieses Node-CI. Der Web-
 (`npx expo export --platform web`) bündelt die App über Metro und dient hier als
 Bundling-Verifikation.
 
+## iOS-Build & TestFlight (EAS)
+
+Der Build läuft in der Cloud über **EAS Build** (kein Mac nötig); der Upload zu
+TestFlight über **EAS Submit**. Vorbereitet ist alles in `eas.json` und `app.json`
+(Bundle-ID `de.vcp.mobile`, Version 1.0.0, Icon, Kamera-/Mikrofon-Nutzungstexte).
+
+**Was NUR du persönlich tun kannst (Apple/Expo-Anmeldungen):**
+1. **Apple Developer Program** ($99/Jahr) mit deiner Apple-ID abschließen und die
+   Programm-/Steuer-Verträge in App Store Connect akzeptieren.
+2. **Expo-Konto** anlegen und lokal einloggen: `npx eas-cli login`.
+3. **App-Datensatz** in App Store Connect anlegen (Bundle-ID `de.vcp.mobile`) und die
+   `ascAppId` + `appleTeamId` in `eas.json` eintragen.
+4. **Signing:** beim `eas build` fragt EAS einmalig nach **Apple-ID-Login inkl. 2FA**,
+   um Distributionszertifikat + Provisioning-Profil zu erzeugen — das passiert
+   ausschließlich lokal bei dir (2FA gehört niemals in den Code/Chat). Alternativ einen
+   **App Store Connect API-Key** (.p8) für 2FA-freie CI-Submits hinterlegen.
+5. In TestFlight die **Beta-Tester** bzw. eine **öffentliche Gruppe** anlegen — daraus
+   entsteht der Einladungslink/-code. (Apple stellt den Link, keine dritte Stelle.)
+
+**Voraussetzung Backend:** TestFlight-Builds laufen über Mobilfunk/fremdes WLAN — die
+API muss **öffentlich erreichbar** sein. Vor dem Build `EXPO_PUBLIC_API_BASE` in
+`eas.json` auf die öffentliche API-URL setzen (siehe `docs/DEPLOY.md`); `localhost`/LAN
+funktioniert auf dem Gerät nicht.
+
+**Befehle (nach den Schritten oben):**
+```sh
+cd platform/apps/mobile
+npx eas-cli login
+npx eas-cli init                    # legt die EAS-Projekt-ID an
+npx eas-cli build --platform ios --profile production
+npx eas-cli submit --platform ios --profile production --latest
+```
+
 ## Verifikationsstand
 
 - `tsc --noEmit` grün.
