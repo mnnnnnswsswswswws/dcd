@@ -28,6 +28,9 @@ jobs:
           --health-retries 10
     env:
       DATABASE_URL: "postgresql://vcp:vcp@localhost:5432/vcp?schema=public"
+      # Prisma braucht directUrl für `migrate deploy`; die CI-Postgres ist ungepoolt,
+      # daher identisch zu DATABASE_URL.
+      DIRECT_URL: "postgresql://vcp:vcp@localhost:5432/vcp?schema=public"
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - uses: actions/checkout@v4

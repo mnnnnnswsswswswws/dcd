@@ -14,7 +14,11 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  // Laufzeit: gepoolte Verbindung (z. B. Neon `-pooler`, `?pgbouncer=true`).
   url      = env("DATABASE_URL")
+  // Migrationen/Introspection: direkte (unpooled) Verbindung. Bei nicht-gepoolten
+  // Setups (lokal, CI) einfach denselben Wert wie DATABASE_URL setzen.
+  directUrl = env("DIRECT_URL")
 }
 
 enum ChallengeStatus {

@@ -52,10 +52,17 @@ geeignet; beide Apps sind rein Client-seitig gegen die API und halten keinen Ser
    gcloud builds submit --tag REGION-docker.pkg.dev/PROJECT/vcp/api:TAG
    ```
 2. **Migration** als einmaliger Cloud Run Job (gleiches Image, überschriebenes
-   command `pnpm exec prisma migrate deploy`), ausgeführt vor jedem Rollout.
+   command `pnpm exec prisma migrate deploy`), ausgeführt vor jedem Rollout. Braucht
+   `DIRECT_URL` (direkte, ungepoolte Verbindung) — die Datasource nutzt `directUrl`
+   für Migrationen.
 3. **API** als Cloud Run Service. Cloud Run setzt `PORT` — `main.ts` liest ihn.
-   Env/Secrets über Secret Manager: `DATABASE_URL` (Cloud SQL Connector),
-   `WEBHOOK_SECRET`, Feature-Flags. Health-Check: `GET /health`.
+   Env/Secrets über Secret Manager: `DATABASE_URL` (Laufzeit; bei Neon die gepoolte
+   `-pooler`-URL), `DIRECT_URL` (Migrationen; direkte URL), `WEBHOOK_SECRET`,
+   Feature-Flags. Health-Check: `GET /health`.
+
+**Neon-Hinweis:** `DATABASE_URL` = gepoolte URL (`...-pooler...?sslmode=require&pgbouncer=true`)
+für die Laufzeit, `DIRECT_URL` = direkte/unpooled URL (`?sslmode=require`) für
+`prisma migrate deploy`. Bei ungepoolten Setups (lokal/CI) sind beide identisch.
 4. **Worker** als Cloud Run Jobs, per Cloud Scheduler getriggert (command mit
    `-- --once`, damit ein Durchlauf läuft und der Job endet):
    - `worker:expire` — abgelaufene Slot-Reservierungen freigeben,
