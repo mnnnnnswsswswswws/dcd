@@ -115,6 +115,8 @@ export interface ChallengeSummary {
   maxSlots: number;
   submissionDeadline: string | null;
   createdAt: string;
+  creator?: { username: string | null; displayName: string | null } | null;
+  occupiedSlots?: number;
 }
 
 export interface Criterion {
@@ -169,6 +171,40 @@ export interface PublicConfig {
   longCaptureEnabled: boolean;
   publicFeedEnabled: boolean;
   payoutsEnabled: boolean;
+  realMoneyEnabled: boolean;
+}
+
+/** Kategorie → Emoji für den immersiven Feed (rein visuell). */
+const CATEGORY_EMOJI: { match: RegExp; emoji: string }[] = [
+  { match: /sport|skill|freiwurf|basket|fitness/i, emoji: '🏀' },
+  { match: /skate|rampe|trick/i, emoji: '🛹' },
+  { match: /koch|rezept|food|essen/i, emoji: '🍳' },
+  { match: /puzzle|cube|rubik/i, emoji: '🧩' },
+  { match: /musik|song|sing|tanz|dance/i, emoji: '🎤' },
+  { match: /kunst|art|zeichn|mal/i, emoji: '🎨' },
+  { match: /game|gaming|spiel/i, emoji: '🎮' },
+];
+
+export function categoryEmoji(category: string | null, title: string): string {
+  const hay = `${category ?? ''} ${title}`;
+  for (const c of CATEGORY_EMOJI) if (c.match.test(hay)) return c.emoji;
+  return '🎬';
+}
+
+/** Deterministischer Farbverlauf je Challenge-ID, im Marken-Bereich (Violett→Blau→Teal). */
+export function feedGradient(id: string): string {
+  let n = 0;
+  for (let i = 0; i < id.length; i++) n = (n * 31 + id.charCodeAt(i)) % 1000;
+  const h = 205 + (n % 80); // 205–285: Blau bis Violett
+  const h2 = h + 25;
+  return `linear-gradient(165deg, hsl(${h} 60% 24%), hsl(${h2} 65% 13%) 68%, #0b0b12)`;
+}
+
+/** Kleine, stabile Demo-Kennzahl aus der ID (kein echtes Engagement-Backend). */
+export function demoCount(id: string, salt: number, max: number): number {
+  let h = salt;
+  for (let i = 0; i < id.length; i++) h = (h * 33 + id.charCodeAt(i)) & 0xffff;
+  return h % max;
 }
 
 export interface EvidenceIntent {

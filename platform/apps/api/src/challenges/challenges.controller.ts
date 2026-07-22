@@ -76,7 +76,7 @@ export class ChallengesController {
       throw apiError('INVALID_INPUT');
     }
     const take = Math.min(Math.max(Number(limit) || 50, 1), 100);
-    return this.prisma.challenge.findMany({
+    const rows = await this.prisma.challenge.findMany({
       where: status !== undefined ? { status: status as (typeof ChallengeStatus)[keyof typeof ChallengeStatus] } : {},
       orderBy: { createdAt: 'desc' },
       take,
@@ -90,8 +90,17 @@ export class ChallengesController {
         maxSlots: true,
         submissionDeadline: true,
         createdAt: true,
+        creator: { select: { username: true, displayName: true } },
       },
     });
+    // Belegte Plätze je Challenge in einem Rutsch (für "N frei" im Feed).
+    const counts = await this.prisma.slot.groupBy({
+      by: ['challengeId'],
+      where: { challengeId: { in: rows.map((r) => r.id) }, status: { in: ['RESERVED', 'CAPTURING', 'UPLOADING', 'SUBMITTED'] } },
+      _count: { _all: true },
+    });
+    const occupied = new Map(counts.map((c) => [c.challengeId, c._count._all]));
+    return rows.map((r) => ({ ...r, occupiedSlots: occupied.get(r.id) ?? 0 }));
   }
 
   /** Einsendungen einer Challenge inkl. Stimmenzahl (für die Moderations-/Auswahlansicht). */

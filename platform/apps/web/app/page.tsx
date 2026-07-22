@@ -2,110 +2,149 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   api,
+  categoryEmoji,
+  demoCount,
   euro,
+  feedGradient,
+  getToken,
   selectionModeLabel,
-  statusLabel,
-  statusTone,
-  subscribeSession,
   type ChallengeSummary,
-  type FeedEntry,
 } from '../lib/api';
+import { IconBookmark, IconComment, IconFlag, IconHeart, IconShare } from './icons';
 
-export default function HomePage() {
-  const [open, setOpen] = useState<ChallengeSummary[]>([]);
-  const [feed, setFeed] = useState<FeedEntry[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+function deadlineText(iso: string | null): string {
+  if (!iso) return 'kein Einsendeschluss';
+  const ms = new Date(iso).getTime() - Date.now();
+  if (ms <= 0) return 'Frist abgelaufen';
+  const days = Math.ceil(ms / 86_400_000);
+  if (days <= 1) return 'Frist heute';
+  return `Frist in ${days} Tagen`;
+}
+
+function handleOf(c: ChallengeSummary): string {
+  return `@${c.creator?.username ?? c.creator?.displayName?.replace(/\s+/g, '').toLowerCase() ?? 'creator'}`;
+}
+
+function initialOf(c: ChallengeSummary): string {
+  return (c.creator?.displayName ?? c.creator?.username ?? c.title ?? '?').charAt(0).toUpperCase();
+}
+
+export default function FeedPage() {
+  const router = useRouter();
+  const [items, setItems] = useState<ChallengeSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [liked, setLiked] = useState<Record<string, boolean>>({});
+  const [saved, setSaved] = useState<Record<string, boolean>>({});
+  const [reported, setReported] = useState<Record<string, boolean>>({});
 
   const load = useCallback(async () => {
     setError(null);
     try {
-      setOpen(await api<ChallengeSummary[]>('/v1/challenges?status=OPEN', { auth: false }));
+      setItems(await api<ChallengeSummary[]>('/v1/challenges?status=OPEN', { auth: false }));
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setLoading(false);
     }
-    // Feed ist optional (Flag PUBLIC_FEED_ENABLED) — 404 ruhig behandeln.
-    try {
-      setFeed(await api<FeedEntry[]>('/v1/feed', { auth: false }));
-    } catch {
-      setFeed(null);
-    }
   }, []);
 
   useEffect(() => {
     void load();
-    return subscribeSession(load);
   }, [load]);
 
-  return (
-    <>
-      <section className="hero">
-        <h1>Zeig, was du kannst.</h1>
-        <p>
-          Tritt bezahlten Video-Challenges bei, reiche deinen Beweis in der App ein und gewinne das
-          Preisgeld. Max. 10 Plätze pro Challenge — schnell sein lohnt sich.
-        </p>
-        <div className="row" style={{ marginTop: 12 }}>
-          <Link href="/create" className="badge open" style={{ padding: '8px 14px' }}>
-            + Eigene Challenge erstellen
+  async function report(c: ChallengeSummary) {
+    setReported((r) => ({ ...r, [c.id]: true }));
+    if (getToken()) {
+      try {
+        await api('/v1/reports', { method: 'POST', body: { targetType: 'CHALLENGE', targetId: c.id, reason: 'OTHER' } });
+      } catch {
+        /* Melden ist unkritisch */
+      }
+    }
+  }
+
+  if (loading) {
+    return <div className="feed" style={{ display: 'grid', placeItems: 'center' }}>
+      <span className="muted">Feed lädt…</span>
+    </div>;
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="feed" style={{ display: 'grid', placeItems: 'center', textAlign: 'center', padding: 24 }}>
+        <div>
+          <div style={{ fontSize: '3rem' }}>🎬</div>
+          <h1>Noch keine Challenges im Feed</h1>
+          {error && <p className="error">{error}</p>}
+          <Link href="/create" className="feed-cta" style={{ display: 'inline-block', marginTop: 8 }}>
+            Erste Challenge erstellen
           </Link>
         </div>
-      </section>
-
-      {error && <p className="error">Fehler: {error}</p>}
-
-      <h2>Offene Challenges</h2>
-      {loading && <p className="muted">Lädt…</p>}
-      <div className="grid">
-        {open.map((c) => (
-          <Link key={c.id} href={`/challenges/${c.id}`} className="card tap">
-            <div className="row between">
-              <strong style={{ fontSize: '1.05rem' }}>{c.title || 'Ohne Titel'}</strong>
-              <span className="prize">{euro(c.prizeAmountCents)}</span>
-            </div>
-            <div className="row" style={{ marginTop: 8 }}>
-              <span className={`badge ${statusTone(c.status)}`}>{statusLabel(c.status)}</span>
-              {c.category && <span className="badge">{c.category}</span>}
-              <span className="badge">{selectionModeLabel(c.selectionMode)}</span>
-            </div>
-            <div className="muted" style={{ marginTop: 8, fontSize: '0.85rem' }}>
-              Einsendeschluss:{' '}
-              {c.submissionDeadline ? new Date(c.submissionDeadline).toLocaleString('de-DE') : '—'}
-            </div>
-          </Link>
-        ))}
-        {!loading && open.length === 0 && (
-          <div className="card">
-            <p className="muted" style={{ margin: 0 }}>
-              Derzeit keine offenen Challenges. Sei die/der Erste und{' '}
-              <Link href="/create">erstelle eine</Link>.
-            </p>
-          </div>
-        )}
       </div>
+    );
+  }
 
-      {feed && feed.length > 0 && (
-        <>
-          <h2>Entschieden</h2>
-          <div className="grid">
-            {feed.map((f) => (
-              <div key={f.id} className="card">
-                <div className="row between">
-                  <span className={`badge ${statusTone(f.status)}`}>{statusLabel(f.status)}</span>
-                  <span className="prize">{euro(f.prizeAmountCents)}</span>
-                </div>
-                <div className="muted" style={{ marginTop: 6, fontSize: '0.85rem' }}>
-                  Gewinner ermittelt · {selectionModeLabel(f.selectionMode)}
-                </div>
+  return (
+    <div className="feed">
+      {items.map((c) => {
+        const free = Math.max(0, c.maxSlots - (c.occupiedSlots ?? 0));
+        return (
+          <section key={c.id} className="feed-item">
+            <div className="feed-bg" style={{ background: feedGradient(c.id) }} />
+            <div className="feed-emoji">{categoryEmoji(c.category, c.title)}</div>
+
+            <div className="feed-rail">
+              <button className={`rail-btn${liked[c.id] ? ' on' : ''}`} onClick={() => setLiked((l) => ({ ...l, [c.id]: !l[c.id] }))}>
+                <IconHeart filled={liked[c.id]} />
+                {demoCount(c.id, 7, 900) + (liked[c.id] ? 1 : 0)}
+              </button>
+              <button className="rail-btn" onClick={() => router.push(`/challenges/${c.id}`)}>
+                <IconComment />
+                {demoCount(c.id, 3, 80)}
+              </button>
+              <button className="rail-btn" onClick={() => router.push(`/challenges/${c.id}`)}>
+                <IconShare />
+                Teilen
+              </button>
+              <button className={`rail-btn${saved[c.id] ? ' on' : ''}`} onClick={() => setSaved((s) => ({ ...s, [c.id]: !s[c.id] }))}>
+                <IconBookmark filled={saved[c.id]} />
+                Merken
+              </button>
+              <button className="rail-btn" onClick={() => report(c)} disabled={reported[c.id]}>
+                <IconFlag />
+                {reported[c.id] ? 'Gemeldet' : 'Melden'}
+              </button>
+            </div>
+
+            <div className="feed-content">
+              <div className="feed-creator">
+                <span className="avatar-grad">{initialOf(c)}</span>
+                <span className="handle">{handleOf(c)}</span>
               </div>
-            ))}
-          </div>
-        </>
-      )}
-    </>
+              <h2 className="feed-title">{c.title || 'Ohne Titel'}</h2>
+              <div className="feed-prizeline">
+                <span className="feed-prize">
+                  {euro(c.prizeAmountCents)}
+                  <small>Preisgeld</small>
+                </span>
+                <span className="status-pill">
+                  Offen · {free} frei
+                </span>
+              </div>
+              <div className="feed-sub">
+                {selectionModeLabel(c.selectionMode)} · {deadlineText(c.submissionDeadline)}
+              </div>
+              <button className="feed-cta" onClick={() => router.push(`/challenges/${c.id}`)}>
+                Challenge ansehen →
+              </button>
+            </div>
+          </section>
+        );
+      })}
+    </div>
   );
 }

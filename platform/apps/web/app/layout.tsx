@@ -1,6 +1,7 @@
 import './globals.css';
 import type { ReactNode } from 'react';
-import { TopBar } from './top-bar';
+import { DemoBanner } from './demo-banner';
+import { BottomNav } from './bottom-nav';
 
 export const metadata = {
   title: 'Video-Challenges',
@@ -16,8 +17,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="de">
       <body>
-        <TopBar />
+        <DemoBanner />
         <main>{children}</main>
+        <BottomNav />
       </body>
     </html>
   );

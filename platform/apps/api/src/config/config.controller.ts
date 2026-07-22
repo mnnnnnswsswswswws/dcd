@@ -16,6 +16,7 @@ export class ConfigController {
       longCaptureEnabled: this.env.LONG_CAPTURE_ENABLED,
       publicFeedEnabled: this.env.PUBLIC_FEED_ENABLED,
       payoutsEnabled: this.env.PAYOUTS_ENABLED,
+      realMoneyEnabled: this.env.REAL_MONEY_ENABLED,
     };
   }
 }
