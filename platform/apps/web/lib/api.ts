@@ -202,13 +202,19 @@ export function categoryEmoji(category: string | null, title: string): string {
   return '🎬';
 }
 
-/** Deterministischer Farbverlauf je Challenge-ID, im Marken-Bereich (Violett→Blau→Teal). */
+/** Deterministische Farbwelt je Challenge-ID: tiefes Blau/Violett als Basis plus
+ *  ein warmer "Abenteuer-Glow" (Radial oben), der Neugier weckt — jedes Item wirkt
+ *  wie ein eigener Schauplatz, bleibt aber in der Markenwelt. */
 export function feedGradient(id: string): string {
   let n = 0;
   for (let i = 0; i < id.length; i++) n = (n * 31 + id.charCodeAt(i)) % 1000;
   const h = 205 + (n % 80); // 205–285: Blau bis Violett
   const h2 = h + 25;
-  return `linear-gradient(165deg, hsl(${h} 60% 24%), hsl(${h2} 65% 13%) 68%, #0b0b12)`;
+  const glow = [16, 292, 168, 42][n % 4]; // Amber, Magenta, Smaragd, Gold — der Funke
+  return [
+    `radial-gradient(90% 60% at ${25 + (n % 50)}% 0%, hsl(${glow} 85% 55% / 0.28), transparent 60%)`,
+    `linear-gradient(165deg, hsl(${h} 62% 26%), hsl(${h2} 66% 13%) 68%, #0b0b12)`,
+  ].join(', ');
 }
 
 export interface EvidenceIntent {

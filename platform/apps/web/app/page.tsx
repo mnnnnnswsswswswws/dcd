@@ -106,8 +106,14 @@ export default function FeedPage() {
 
   if (loading) {
     return (
-      <div className="feed" style={{ display: 'grid', placeItems: 'center' }}>
-        <span className="muted">Feed lädt…</span>
+      <div className="feed">
+        <section className="skel-item">
+          <div className="skel" style={{ width: 140, height: 40, borderRadius: 999 }} />
+          <div className="skel" style={{ width: '70%', height: 30 }} />
+          <div className="skel" style={{ width: '45%', height: 26 }} />
+          <div className="skel" style={{ width: '58%', height: 16 }} />
+          <div className="skel" style={{ width: 190, height: 48, borderRadius: 16 }} />
+        </section>
       </div>
     );
   }
