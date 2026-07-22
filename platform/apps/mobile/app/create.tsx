@@ -5,7 +5,7 @@ import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Badge, Button, Card, ErrorText, Muted } from '../components/ui';
 import { api, euro, selectionModeLabel } from '../lib/api';
 import { useSession } from '../lib/session';
-import { colors } from '../lib/theme';
+import { colors, fonts } from '../lib/theme';
 
 interface CreatedResult {
   challenge: { id: string; status: string; prizeAmountCents: number };
@@ -125,16 +125,17 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 48 },
-  h1: { fontSize: 20, fontWeight: '800', color: colors.text },
-  prize: { fontSize: 18, fontWeight: '800', color: colors.text },
-  label: { fontSize: 13, color: colors.muted },
+  h1: { fontSize: 22, fontFamily: fonts.heading, color: colors.text },
+  prize: { fontSize: 19, fontFamily: fonts.heading, color: colors.accent },
+  label: { fontSize: 13, color: colors.muted, fontFamily: fonts.body },
   input: {
     borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
+    borderRadius: 14,
+    paddingHorizontal: 14,
     paddingVertical: 10,
     color: colors.text,
+    fontFamily: fonts.body,
     backgroundColor: colors.surface,
   },
   pickerWrap: {

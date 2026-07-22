@@ -13,7 +13,7 @@ import {
   type SubmissionRow,
 } from '../../lib/api';
 import { useSession } from '../../lib/session';
-import { colors } from '../../lib/theme';
+import { colors, fonts } from '../../lib/theme';
 
 const TERMINAL = new Set(['WINNER_LOCKED', 'PAID_OUT', 'CANCELLED', 'EXPIRED']);
 const SELECTABLE = new Set(['SUBMISSIONS_CLOSED', 'IN_REVIEW', 'SELECTION']);
@@ -285,11 +285,11 @@ function ReportButton({ submissionId, onDone }: { challengeId: string; submissio
 
 const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 48 },
-  title: { fontSize: 18, fontWeight: '800', color: colors.text, flexShrink: 1 },
-  prize: { fontSize: 17, fontWeight: '800', color: colors.text },
-  body: { color: colors.text, fontSize: 14 },
-  sectionLabel: { fontSize: 15, fontWeight: '700', color: colors.text },
-  h2: { fontSize: 17, fontWeight: '700', color: colors.text, marginVertical: 10 },
+  title: { fontSize: 20, fontFamily: fonts.heading, color: colors.text, flexShrink: 1 },
+  prize: { fontSize: 18, fontFamily: fonts.heading, color: colors.accent },
+  body: { color: colors.text, fontSize: 14, fontFamily: fonts.body },
+  sectionLabel: { fontSize: 16, fontFamily: fonts.heading, color: colors.text },
+  h2: { fontSize: 19, fontFamily: fonts.heading, color: colors.text, marginVertical: 10 },
   progress: { height: 8, borderRadius: 999, backgroundColor: colors.surface2, borderColor: colors.border, borderWidth: 1, overflow: 'hidden' },
   progressFill: { height: '100%', backgroundColor: colors.accent },
 });

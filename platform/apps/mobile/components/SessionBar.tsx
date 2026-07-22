@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { StyleSheet, Switch, Text, View } from 'react-native';
 import { useSession } from '../lib/session';
-import { colors } from '../lib/theme';
+import { colors, fonts } from '../lib/theme';
 import { Button, ErrorText, Row } from './ui';
 
 /** Kompakte Session-Leiste: Registrierung (18+-Gate) bzw. Anmeldestatus + Abmelden. */
@@ -54,5 +54,5 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     gap: 8,
   },
-  who: { color: colors.text, fontSize: 14, fontWeight: '600' },
+  who: { color: colors.text, fontSize: 14, fontFamily: fonts.bodySemibold },
 });

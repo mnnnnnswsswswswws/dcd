@@ -4,7 +4,7 @@ import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button, Card, ErrorText, Muted } from '../components/ui';
 import { api, type MyProfile } from '../lib/api';
 import { useSession } from '../lib/session';
-import { colors } from '../lib/theme';
+import { colors, fonts } from '../lib/theme';
 
 export default function ProfileScreen() {
   const { token } = useSession();
@@ -100,14 +100,15 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 48 },
-  label: { fontSize: 13, color: colors.muted },
+  label: { fontSize: 13, color: colors.muted, fontFamily: fonts.body },
   input: {
     borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
+    borderRadius: 14,
+    paddingHorizontal: 14,
     paddingVertical: 10,
     color: colors.text,
+    fontFamily: fonts.body,
     backgroundColor: colors.surface,
   },
 });

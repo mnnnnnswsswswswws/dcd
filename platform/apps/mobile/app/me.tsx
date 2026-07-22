@@ -4,7 +4,7 @@ import { RefreshControl, ScrollView, StyleSheet, Text } from 'react-native';
 import { Badge, Card, ErrorText, Muted, Row, StatusBadge } from '../components/ui';
 import { api, euro, selectionModeLabel, type ChallengeSummary, type MyChallenges } from '../lib/api';
 import { useSession } from '../lib/session';
-import { colors } from '../lib/theme';
+import { colors, fonts } from '../lib/theme';
 
 function List({ items, onOpen }: { items: (ChallengeSummary & { slotStatus?: string })[]; onOpen: (id: string) => void }) {
   if (items.length === 0) return <Muted>Keine.</Muted>;
@@ -77,7 +77,7 @@ export default function MeScreen() {
 
 const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 48 },
-  h2: { fontSize: 17, fontWeight: '700', color: colors.text, marginVertical: 10 },
-  title: { fontSize: 16, fontWeight: '700', color: colors.text, flexShrink: 1 },
-  prize: { fontSize: 16, fontWeight: '800', color: colors.text },
+  h2: { fontSize: 19, fontFamily: fonts.heading, color: colors.text, marginVertical: 10 },
+  title: { fontSize: 16, fontFamily: fonts.bodyBold, color: colors.text, flexShrink: 1 },
+  prize: { fontSize: 17, fontFamily: fonts.heading, color: colors.accent },
 });

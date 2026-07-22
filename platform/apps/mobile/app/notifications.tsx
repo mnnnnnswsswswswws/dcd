@@ -4,7 +4,7 @@ import { RefreshControl, ScrollView, StyleSheet, Text } from 'react-native';
 import { Badge, Button, Card, ErrorText, Muted, Row } from '../components/ui';
 import { api, type NotificationsResult } from '../lib/api';
 import { useSession } from '../lib/session';
-import { colors } from '../lib/theme';
+import { colors, fonts } from '../lib/theme';
 
 export default function NotificationsScreen() {
   const router = useRouter();
@@ -79,6 +79,6 @@ export default function NotificationsScreen() {
 
 const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 48 },
-  title: { fontSize: 15, fontWeight: '700', color: colors.text, flexShrink: 1 },
-  time: { fontSize: 12, color: colors.muted },
+  title: { fontSize: 16, fontFamily: fonts.bodyBold, color: colors.text, flexShrink: 1 },
+  time: { fontSize: 12, color: colors.muted, fontFamily: fonts.body },
 });

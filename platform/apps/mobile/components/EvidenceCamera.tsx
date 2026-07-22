@@ -3,7 +3,7 @@ import { FileSystemUploadType, uploadAsync } from 'expo-file-system/legacy';
 import { useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { api, type EvidenceIntent } from '../lib/api';
-import { colors } from '../lib/theme';
+import { colors, fonts } from '../lib/theme';
 import { Button, ErrorText, Muted, Row } from './ui';
 
 type Phase = 'idle' | 'recording' | 'recorded' | 'submitting';
@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     gap: 10,
   },
-  title: { fontSize: 16, fontWeight: '700', color: colors.text },
+  title: { fontSize: 16, fontFamily: fonts.heading, color: colors.text },
   preview: {
     width: '100%',
     aspectRatio: 9 / 16,

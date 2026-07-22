@@ -13,6 +13,14 @@ export const colors = {
   blue: '#7a8a5e', // Zweitakzent (Sage) für "erledigt"-Zustände
 };
 
+/** Schriftfamilien des Organic-Systems (nativ via expo-font geladen). */
+export const fonts = {
+  heading: 'Caprasimo_400Regular',
+  body: 'Figtree_400Regular',
+  bodySemibold: 'Figtree_600SemiBold',
+  bodyBold: 'Figtree_700Bold',
+};
+
 export type Tone = 'open' | 'done' | 'warn' | 'neutral';
 
 export function statusTone(status: string): Tone {

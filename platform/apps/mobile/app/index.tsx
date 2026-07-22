@@ -4,7 +4,7 @@ import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native
 import { SessionBar } from '../components/SessionBar';
 import { Badge, Button, Card, ErrorText, Muted, Row, StatusBadge } from '../components/ui';
 import { api, euro, selectionModeLabel, type ChallengeSummary } from '../lib/api';
-import { colors } from '../lib/theme';
+import { colors, fonts } from '../lib/theme';
 
 export default function DiscoverScreen() {
   const router = useRouter();
@@ -87,8 +87,8 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     gap: 6,
   },
-  heroTitle: { fontSize: 22, fontWeight: '800', color: colors.text },
-  h2: { fontSize: 17, fontWeight: '700', color: colors.text, marginVertical: 10 },
-  title: { fontSize: 16, fontWeight: '700', color: colors.text, flexShrink: 1 },
-  prize: { fontSize: 16, fontWeight: '800', color: colors.text },
+  heroTitle: { fontSize: 26, fontFamily: fonts.heading, color: colors.text },
+  h2: { fontSize: 19, fontFamily: fonts.heading, color: colors.text, marginVertical: 10 },
+  title: { fontSize: 16, fontFamily: fonts.bodyBold, color: colors.text, flexShrink: 1 },
+  prize: { fontSize: 17, fontFamily: fonts.heading, color: colors.accent, flexShrink: 0 },
 });

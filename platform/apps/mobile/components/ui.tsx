@@ -8,7 +8,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import { colors, statusTone, toneColor } from '../lib/theme';
+import { colors, fonts, statusTone, toneColor } from '../lib/theme';
 import { statusLabel } from '../lib/api';
 
 export function Card({
@@ -115,7 +115,7 @@ export const styles = StyleSheet.create({
     paddingVertical: 3,
     alignSelf: 'flex-start',
   },
-  badgeText: { fontSize: 12, fontWeight: '700' },
+  badgeText: { fontSize: 12, fontFamily: fonts.bodySemibold },
   button: {
     borderWidth: 1,
     borderColor: colors.border,
@@ -127,8 +127,8 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     minWidth: 96,
   },
-  buttonText: { fontWeight: '700', fontSize: 15 },
-  muted: { color: colors.muted, fontSize: 13 },
-  error: { color: colors.danger, fontSize: 14 },
+  buttonText: { fontFamily: fonts.heading, fontSize: 15 },
+  muted: { color: colors.muted, fontSize: 13, fontFamily: fonts.body },
+  error: { color: colors.danger, fontSize: 14, fontFamily: fonts.body },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
 });

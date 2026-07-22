@@ -1,10 +1,27 @@
+import { Caprasimo_400Regular } from '@expo-google-fonts/caprasimo';
+import { Figtree_400Regular, Figtree_600SemiBold, Figtree_700Bold } from '@expo-google-fonts/figtree';
+import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { SessionProvider } from '../lib/session';
-import { colors } from '../lib/theme';
+import { colors, fonts } from '../lib/theme';
 
 export default function RootLayout() {
+  const [loaded] = useFonts({
+    Caprasimo_400Regular,
+    Figtree_400Regular,
+    Figtree_600SemiBold,
+    Figtree_700Bold,
+  });
+
+  // Bis die Organic-Schriften geladen sind, warmen Hintergrund zeigen (kein
+  // System-Font-Flash), dann die App rendern.
+  if (!loaded) {
+    return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
+  }
+
   return (
     <SafeAreaProvider>
       <SessionProvider>
@@ -12,7 +29,7 @@ export default function RootLayout() {
         <Stack
           screenOptions={{
             headerStyle: { backgroundColor: colors.bg },
-            headerTitleStyle: { fontWeight: '700', color: colors.text },
+            headerTitleStyle: { fontFamily: fonts.heading, color: colors.text },
             headerTintColor: colors.accent,
             contentStyle: { backgroundColor: colors.bg },
           }}
