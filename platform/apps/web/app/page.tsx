@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import {
   api,
   categoryEmoji,
-  demoCount,
   euro,
   feedGradient,
   getToken,
@@ -37,14 +36,26 @@ export default function FeedPage() {
   const [items, setItems] = useState<ChallengeSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [liked, setLiked] = useState<Record<string, boolean>>({});
+  // Echte Engagement-Zustände (aus dem Backend).
+  const [likes, setLikes] = useState<Record<string, boolean>>({});
+  const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
   const [saved, setSaved] = useState<Record<string, boolean>>({});
   const [reported, setReported] = useState<Record<string, boolean>>({});
 
   const load = useCallback(async () => {
     setError(null);
     try {
-      setItems(await api<ChallengeSummary[]>('/v1/challenges?status=OPEN', { auth: false }));
+      const list = await api<ChallengeSummary[]>('/v1/challenges?status=OPEN', { auth: false });
+      setItems(list);
+      setLikeCounts(Object.fromEntries(list.map((c) => [c.id, c.likeCount ?? 0])));
+      if (getToken()) {
+        const [myLikes, myBookmarks] = await Promise.all([
+          api<string[]>('/v1/users/me/likes').catch(() => []),
+          api<string[]>('/v1/users/me/bookmarks').catch(() => []),
+        ]);
+        setLikes(Object.fromEntries(myLikes.map((id) => [id, true])));
+        setSaved(Object.fromEntries(myBookmarks.map((id) => [id, true])));
+      }
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -56,21 +67,49 @@ export default function FeedPage() {
     void load();
   }, [load]);
 
+  function requireLogin(): boolean {
+    if (getToken()) return true;
+    router.push('/profile');
+    return false;
+  }
+
+  async function like(c: ChallengeSummary) {
+    if (!requireLogin()) return;
+    try {
+      const res = await api<{ liked: boolean; likeCount: number }>(`/v1/challenges/${c.id}/like`, { method: 'POST' });
+      setLikes((l) => ({ ...l, [c.id]: res.liked }));
+      setLikeCounts((n) => ({ ...n, [c.id]: res.likeCount }));
+    } catch {
+      /* ignoriert */
+    }
+  }
+
+  async function bookmark(c: ChallengeSummary) {
+    if (!requireLogin()) return;
+    try {
+      const res = await api<{ saved: boolean }>(`/v1/challenges/${c.id}/bookmark`, { method: 'POST' });
+      setSaved((s) => ({ ...s, [c.id]: res.saved }));
+    } catch {
+      /* ignoriert */
+    }
+  }
+
   async function report(c: ChallengeSummary) {
+    if (!requireLogin()) return;
     setReported((r) => ({ ...r, [c.id]: true }));
-    if (getToken()) {
-      try {
-        await api('/v1/reports', { method: 'POST', body: { targetType: 'CHALLENGE', targetId: c.id, reason: 'OTHER' } });
-      } catch {
-        /* Melden ist unkritisch */
-      }
+    try {
+      await api('/v1/reports', { method: 'POST', body: { targetType: 'CHALLENGE', targetId: c.id, reason: 'OTHER' } });
+    } catch {
+      /* Melden ist unkritisch */
     }
   }
 
   if (loading) {
-    return <div className="feed" style={{ display: 'grid', placeItems: 'center' }}>
-      <span className="muted">Feed lädt…</span>
-    </div>;
+    return (
+      <div className="feed" style={{ display: 'grid', placeItems: 'center' }}>
+        <span className="muted">Feed lädt…</span>
+      </div>
+    );
   }
 
   if (items.length === 0) {
@@ -98,19 +137,19 @@ export default function FeedPage() {
             <div className="feed-emoji">{categoryEmoji(c.category, c.title)}</div>
 
             <div className="feed-rail">
-              <button className={`rail-btn${liked[c.id] ? ' on' : ''}`} onClick={() => setLiked((l) => ({ ...l, [c.id]: !l[c.id] }))}>
-                <IconHeart filled={liked[c.id]} />
-                {demoCount(c.id, 7, 900) + (liked[c.id] ? 1 : 0)}
+              <button className={`rail-btn${likes[c.id] ? ' on' : ''}`} onClick={() => like(c)}>
+                <IconHeart filled={likes[c.id]} />
+                {likeCounts[c.id] ?? 0}
               </button>
               <button className="rail-btn" onClick={() => router.push(`/challenges/${c.id}`)}>
                 <IconComment />
-                {demoCount(c.id, 3, 80)}
+                {c.commentCount ?? 0}
               </button>
               <button className="rail-btn" onClick={() => router.push(`/challenges/${c.id}`)}>
                 <IconShare />
                 Teilen
               </button>
-              <button className={`rail-btn${saved[c.id] ? ' on' : ''}`} onClick={() => setSaved((s) => ({ ...s, [c.id]: !s[c.id] }))}>
+              <button className={`rail-btn${saved[c.id] ? ' on' : ''}`} onClick={() => bookmark(c)}>
                 <IconBookmark filled={saved[c.id]} />
                 Merken
               </button>
@@ -131,9 +170,7 @@ export default function FeedPage() {
                   {euro(c.prizeAmountCents)}
                   <small>Preisgeld</small>
                 </span>
-                <span className="status-pill">
-                  Offen · {free} frei
-                </span>
+                <span className="status-pill">Offen · {free} frei</span>
               </div>
               <div className="feed-sub">
                 {selectionModeLabel(c.selectionMode)} · {deadlineText(c.submissionDeadline)}

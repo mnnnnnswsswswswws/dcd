@@ -36,6 +36,7 @@ import { cancelChallenge } from './cancel-challenge.js';
 import { submitEntry } from '../submissions/submit-entry.js';
 import { castVote } from '../submissions/cast-vote.js';
 import { processPayout } from '../funding/process-payout.js';
+import { addComment, countsFor, listComments, toggleBookmark, toggleLike } from '../social/social.js';
 
 @Controller('v1/challenges')
 export class ChallengesController {
@@ -100,7 +101,47 @@ export class ChallengesController {
       _count: { _all: true },
     });
     const occupied = new Map(counts.map((c) => [c.challengeId, c._count._all]));
-    return rows.map((r) => ({ ...r, occupiedSlots: occupied.get(r.id) ?? 0 }));
+    const social = await countsFor({ prisma: this.prisma }, rows.map((r) => r.id));
+    return rows.map((r) => ({
+      ...r,
+      occupiedSlots: occupied.get(r.id) ?? 0,
+      likeCount: social.get(r.id)?.likeCount ?? 0,
+      commentCount: social.get(r.id)?.commentCount ?? 0,
+    }));
+  }
+
+  /** Like auf eine Challenge togglen. */
+  @Post(':id/like')
+  @HttpCode(200)
+  @UseGuards(AuthGuard)
+  async like(@Param('id', new ParseUUIDPipe()) id: string, @CurrentUserId() userId: string) {
+    return toggleLike({ prisma: this.prisma }, id, userId);
+  }
+
+  /** Challenge merken (Bookmark) togglen. */
+  @Post(':id/bookmark')
+  @HttpCode(200)
+  @UseGuards(AuthGuard)
+  async bookmark(@Param('id', new ParseUUIDPipe()) id: string, @CurrentUserId() userId: string) {
+    return toggleBookmark({ prisma: this.prisma }, id, userId);
+  }
+
+  /** Kommentare einer Challenge (öffentlich lesbar). */
+  @Get(':id/comments')
+  async comments(@Param('id', new ParseUUIDPipe()) id: string) {
+    return listComments({ prisma: this.prisma }, id);
+  }
+
+  /** Kommentar hinzufügen. */
+  @Post(':id/comments')
+  @HttpCode(201)
+  @UseGuards(AuthGuard)
+  async addComment(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @CurrentUserId() userId: string,
+    @Body() body: { body?: string },
+  ) {
+    return addComment({ prisma: this.prisma }, id, userId, body);
   }
 
   /** Einsendungen einer Challenge inkl. Stimmenzahl (für die Moderations-/Auswahlansicht). */
@@ -154,7 +195,11 @@ export class ChallengesController {
       where: { challengeId: id },
       select: { winnerSubmissionId: true, decisionSource: true },
     });
-    return { ...challenge, occupiedSlots: occupied, winner: decision };
+    const [likeCount, commentCount] = await Promise.all([
+      this.prisma.challengeLike.count({ where: { challengeId: id } }),
+      this.prisma.comment.count({ where: { challengeId: id } }),
+    ]);
+    return { ...challenge, occupiedSlots: occupied, winner: decision, likeCount, commentCount };
   }
 
   /** Reserviert einen Teilnehmerplatz für den authentifizierten Nutzer. */

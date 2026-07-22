@@ -18,6 +18,7 @@ import { CurrentUserId } from '../auth/current-user.decorator.js';
 import { registerUser } from './register-user.js';
 import { updateProfile, type UpdateProfileInput } from './update-profile.js';
 import { listNotifications, markAllNotificationsRead } from '../notifications/list-notifications.js';
+import { listMyBookmarkIds, listMyLikeIds } from '../social/social.js';
 
 @Controller('v1/users')
 export class UsersController {
@@ -107,5 +108,19 @@ export class UsersController {
   @UseGuards(AuthGuard)
   async markNotificationsRead(@CurrentUserId() userId: string) {
     return markAllNotificationsRead({ prisma: this.prisma }, userId);
+  }
+
+  /** Challenge-IDs, die der Nutzer geliked hat (für den Feed-Zustand). */
+  @Get('me/likes')
+  @UseGuards(AuthGuard)
+  async myLikes(@CurrentUserId() userId: string) {
+    return listMyLikeIds({ prisma: this.prisma }, userId);
+  }
+
+  /** Gemerkte Challenge-IDs des Nutzers. */
+  @Get('me/bookmarks')
+  @UseGuards(AuthGuard)
+  async myBookmarks(@CurrentUserId() userId: string) {
+    return listMyBookmarkIds({ prisma: this.prisma }, userId);
   }
 }

@@ -43,6 +43,8 @@ export type { PublicProfile } from './users/get-profile.js';
 export { MockAppCheckVerifier } from './app-check/app-check-verifier.js';
 export type { AppCheckVerifier } from './app-check/app-check-verifier.js';
 export { createAppCheckVerifier } from './app-check/create-app-check-verifier.js';
+export { toggleLike, toggleBookmark, addComment, listComments, listMyLikeIds, listMyBookmarkIds, countsFor } from './social/social.js';
+export type { CommentRow } from './social/social.js';
 export { writeNotification } from './notifications/write-notification.js';
 export { listNotifications, markAllNotificationsRead } from './notifications/list-notifications.js';
 export type { NotificationRow, ListNotificationsResult } from './notifications/list-notifications.js';

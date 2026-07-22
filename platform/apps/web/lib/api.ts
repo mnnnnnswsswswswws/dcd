@@ -117,6 +117,15 @@ export interface ChallengeSummary {
   createdAt: string;
   creator?: { username: string | null; displayName: string | null } | null;
   occupiedSlots?: number;
+  likeCount?: number;
+  commentCount?: number;
+}
+
+export interface CommentRow {
+  id: string;
+  body: string;
+  createdAt: string;
+  author: string;
 }
 
 export interface Criterion {
@@ -134,6 +143,8 @@ export interface ChallengeDetail extends ChallengeSummary {
   occupiedSlots: number;
   criteria: Criterion[];
   winner: { winnerSubmissionId: string | null; decisionSource: string } | null;
+  likeCount: number;
+  commentCount: number;
 }
 
 export interface SubmissionRow {
@@ -198,13 +209,6 @@ export function feedGradient(id: string): string {
   const h = 205 + (n % 80); // 205–285: Blau bis Violett
   const h2 = h + 25;
   return `linear-gradient(165deg, hsl(${h} 60% 24%), hsl(${h2} 65% 13%) 68%, #0b0b12)`;
-}
-
-/** Kleine, stabile Demo-Kennzahl aus der ID (kein echtes Engagement-Backend). */
-export function demoCount(id: string, salt: number, max: number): number {
-  let h = salt;
-  for (let i = 0; i < id.length; i++) h = (h * 33 + id.charCodeAt(i)) & 0xffff;
-  return h % max;
 }
 
 export interface EvidenceIntent {

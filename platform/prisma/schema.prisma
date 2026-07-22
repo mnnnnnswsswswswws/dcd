@@ -93,6 +93,51 @@ enum EvidenceStatus {
   EXPIRED
 }
 
+/// Like auf eine Challenge (ein Like pro Nutzer/Challenge).
+model ChallengeLike {
+  id          String   @id @default(uuid()) @db.Uuid
+  challengeId String   @map("challenge_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  challenge Challenge @relation(fields: [challengeId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@unique([challengeId, userId])
+  @@index([challengeId])
+  @@map("challenge_likes")
+}
+
+/// Merkzettel-Eintrag (ein Bookmark pro Nutzer/Challenge).
+model ChallengeBookmark {
+  id          String   @id @default(uuid()) @db.Uuid
+  challengeId String   @map("challenge_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  challenge Challenge @relation(fields: [challengeId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@unique([challengeId, userId])
+  @@index([userId])
+  @@map("challenge_bookmarks")
+}
+
+/// Kommentar zu einer Challenge.
+model Comment {
+  id          String   @id @default(uuid()) @db.Uuid
+  challengeId String   @map("challenge_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  body        String
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  challenge Challenge @relation(fields: [challengeId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@index([challengeId, createdAt])
+  @@map("comments")
+}
+
 /// In-App-Benachrichtigung an einen Nutzer (aus Domänenereignissen abgeleitet).
 model Notification {
   id          String    @id @default(uuid()) @db.Uuid
@@ -125,6 +170,9 @@ model User {
   reports           Report[]
   evidence          EvidenceAsset[]
   notifications     Notification[]
+  likes             ChallengeLike[]
+  bookmarks         ChallengeBookmark[]
+  comments          Comment[]
 
   @@map("users")
 }
@@ -149,6 +197,9 @@ model Challenge {
   votes       Vote[]
   criteria    ChallengeCriterion[]
   evidence    EvidenceAsset[]
+  likes       ChallengeLike[]
+  bookmarks   ChallengeBookmark[]
+  comments    Comment[]
   decision    WinnerDecision?
   funding     ChallengeFunding?
   payout      Payout?

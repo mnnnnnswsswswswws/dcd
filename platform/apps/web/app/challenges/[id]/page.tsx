@@ -19,6 +19,7 @@ import {
 } from '../../../lib/api';
 import { ReportButton } from '../../report-button';
 import { EvidenceRecorder } from '../../evidence-recorder';
+import { CommentsSection, SocialRow } from '../../comments';
 
 const TERMINAL = new Set(['WINNER_LOCKED', 'PAID_OUT', 'CANCELLED', 'EXPIRED']);
 const SELECTABLE = new Set(['SUBMISSIONS_CLOSED', 'IN_REVIEW', 'SELECTION']);
@@ -169,6 +170,8 @@ export default function ChallengePage() {
                 Gewinner steht fest — ermittelt durch {selectionModeLabel(challenge.selectionMode)}.
               </div>
             )}
+
+            <SocialRow challengeId={id} likeCount={challenge.likeCount} commentCount={challenge.commentCount} />
           </div>
 
           {/* Teilnahme */}
@@ -308,6 +311,8 @@ export default function ChallengePage() {
             })}
             {loggedIn && subs.length === 0 && <p className="muted">Noch keine Einsendungen.</p>}
           </div>
+
+          <CommentsSection challengeId={id} />
         </>
       )}
     </>
