@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { apiError } from '@vcp/contracts';
 import type { EventPublisher } from '../events/event-publisher.js';
+import { writeNotification } from '../notifications/write-notification.js';
 
 export interface ModerateSubmissionDeps {
   prisma: PrismaClient;
@@ -49,6 +50,18 @@ export async function moderateSubmission(
         finalizedAt: input.decision === 'APPROVED' ? now : null,
       },
     });
+
+    await writeNotification(tx, {
+      userId: submission.participantId,
+      type: input.decision === 'APPROVED' ? 'submission.approved' : 'submission.rejected',
+      challengeId: submission.challengeId,
+      title: input.decision === 'APPROVED' ? 'Einsendung freigegeben' : 'Einsendung abgelehnt',
+      body:
+        input.decision === 'APPROVED'
+          ? 'Deine Einsendung wurde freigegeben und ist jetzt gewinnberechtigt.'
+          : 'Deine Einsendung wurde leider abgelehnt.',
+    });
+
     return { challengeId: submission.challengeId, status: updated.status };
   });
 

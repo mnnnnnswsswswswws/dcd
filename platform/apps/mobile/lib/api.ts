@@ -134,6 +134,21 @@ export interface MyProfile {
   createdAt: string;
 }
 
+export interface NotificationRow {
+  id: string;
+  type: string;
+  challengeId: string | null;
+  title: string;
+  body: string;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface NotificationsResult {
+  unreadCount: number;
+  items: NotificationRow[];
+}
+
 export function euro(cents: number): string {
   return `${(cents / 100).toFixed(2).replace('.', ',')} €`;
 }

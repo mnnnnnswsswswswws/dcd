@@ -141,6 +141,10 @@ OpenAPI-3.1-Spezifikation liegt unter [`docs/openapi.yaml`](docs/openapi.yaml).
 | `POST /v1/users`                        | —       | Registrierung (18+-Gate); ID dient als Bearer-Token     |
 | `GET  /v1/users/me`                     | Bearer  | Eigenes Profil                                          |
 | `GET  /v1/users/me/challenges`          | Bearer  | Eigene erstellte + beigetretene Challenges              |
+| `PATCH /v1/users/me`                    | Bearer  | Eigenes Profil (Nutzername/Anzeigename/Bio)             |
+| `GET  /v1/profiles/:username`           | —       | Öffentliches Profil samt Kennzahlen                     |
+| `GET  /v1/users/me/notifications`       | Bearer  | In-App-Mitteilungen + Ungelesen-Zähler                  |
+| `POST /v1/users/me/notifications/read`  | Bearer  | Alle Mitteilungen als gelesen markieren                 |
 | `POST /v1/challenges`                   | Bearer  | Challenge erstellen (`PENDING_FUNDING`) + Funding-Absicht |
 | `POST /v1/challenges/:id/join`          | Bearer  | Teilnehmerplatz reservieren (201, sonst 4xx-Code)      |
 | `POST /v1/challenges/:id/evidence-intent` | Bearer | In-App-Aufnahme-Upload anfordern (nur `LONG_CAPTURE_ENABLED`, sonst 404) |

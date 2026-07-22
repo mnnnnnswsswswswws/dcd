@@ -17,6 +17,7 @@ import { AuthGuard } from '../auth/auth.guard.js';
 import { CurrentUserId } from '../auth/current-user.decorator.js';
 import { registerUser } from './register-user.js';
 import { updateProfile, type UpdateProfileInput } from './update-profile.js';
+import { listNotifications, markAllNotificationsRead } from '../notifications/list-notifications.js';
 
 @Controller('v1/users')
 export class UsersController {
@@ -91,5 +92,20 @@ export class UsersController {
     const joined = slots.map((s) => ({ ...s.challenge, slotStatus: s.status }));
 
     return { created, joined };
+  }
+
+  /** In-App-Benachrichtigungen des Nutzers (neueste zuerst) inkl. Ungelesen-Zähler. */
+  @Get('me/notifications')
+  @UseGuards(AuthGuard)
+  async notifications(@CurrentUserId() userId: string) {
+    return listNotifications({ prisma: this.prisma }, userId);
+  }
+
+  /** Markiert alle Benachrichtigungen des Nutzers als gelesen. */
+  @Post('me/notifications/read')
+  @HttpCode(200)
+  @UseGuards(AuthGuard)
+  async markNotificationsRead(@CurrentUserId() userId: string) {
+    return markAllNotificationsRead({ prisma: this.prisma }, userId);
   }
 }

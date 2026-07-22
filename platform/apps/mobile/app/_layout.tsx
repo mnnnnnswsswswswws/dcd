@@ -20,6 +20,7 @@ export default function RootLayout() {
           <Stack.Screen name="index" options={{ title: 'Video-Challenges' }} />
           <Stack.Screen name="create" options={{ title: 'Challenge erstellen' }} />
           <Stack.Screen name="me" options={{ title: 'Meine Challenges' }} />
+          <Stack.Screen name="notifications" options={{ title: 'Mitteilungen' }} />
           <Stack.Screen name="profile" options={{ title: 'Profil' }} />
           <Stack.Screen name="challenge/[id]" options={{ title: 'Challenge' }} />
         </Stack>

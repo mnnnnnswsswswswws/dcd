@@ -3,6 +3,7 @@ import { apiError } from '@vcp/contracts';
 import { canTransitionChallenge } from '@vcp/domain';
 import type { EventPublisher } from '../events/event-publisher.js';
 import { writeAudit } from '../audit/write-audit.js';
+import { writeNotification } from '../notifications/write-notification.js';
 
 const TRANSACTION_TIMEOUT_MS = 20_000;
 
@@ -118,6 +119,23 @@ export async function confirmFunding(
         before: { status: challenge.status },
         after: { status: 'OPEN', fundingId: funding.id },
       });
+
+      // Ersteller benachrichtigen: Challenge ist jetzt öffentlich.
+      const chal = await tx.challenge.findUnique({
+        where: { id: funding.challengeId },
+        select: { creatorId: true, title: true },
+      });
+      if (chal !== null) {
+        await writeNotification(tx, {
+          userId: chal.creatorId,
+          type: 'challenge.published',
+          challengeId: funding.challengeId,
+          title: 'Challenge veröffentlicht',
+          body: chal.title
+            ? `„${chal.title}" ist jetzt offen für Teilnehmer.`
+            : 'Deine Challenge ist jetzt offen für Teilnehmer.',
+        });
+      }
 
       return { challengeId: funding.challengeId, published: true, alreadyConfirmed: false };
     },

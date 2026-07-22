@@ -196,6 +196,21 @@ export interface PublicProfile {
   wonCount: number;
 }
 
+export interface NotificationRow {
+  id: string;
+  type: string;
+  challengeId: string | null;
+  title: string;
+  body: string;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface NotificationsResult {
+  unreadCount: number;
+  items: NotificationRow[];
+}
+
 /** Menschenlesbare Beschriftungen der Challenge-Zustände (Launch-taugliches Deutsch). */
 export const STATUS_LABELS: Record<string, string> = {
   DRAFT: 'Entwurf',

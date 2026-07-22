@@ -5,12 +5,14 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   API_BASE_IS_FIXED,
+  api,
   clearToken,
   emitSession,
   getConfig,
   register,
   setApiBase,
   subscribeSession,
+  type NotificationsResult,
 } from '../lib/api';
 
 /**
@@ -27,12 +29,20 @@ export function TopBar() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [unread, setUnread] = useState(0);
 
   useEffect(() => {
     const sync = () => {
       const c = getConfig();
       setToken(c.token);
       setApiBaseState(c.apiBase);
+      if (c.token) {
+        api<NotificationsResult>('/v1/users/me/notifications')
+          .then((r) => setUnread(r.unreadCount))
+          .catch(() => setUnread(0));
+      } else {
+        setUnread(0);
+      }
     };
     sync();
     return subscribeSession(sync);
@@ -65,6 +75,7 @@ export function TopBar() {
     { href: '/', label: 'Entdecken' },
     { href: '/create', label: 'Erstellen' },
     { href: '/me', label: 'Meine' },
+    { href: '/notifications', label: unread > 0 ? `Mitteilungen (${unread})` : 'Mitteilungen' },
     { href: '/profile', label: 'Profil' },
   ];
 

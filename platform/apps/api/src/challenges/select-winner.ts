@@ -3,6 +3,7 @@ import { apiError } from '@vcp/contracts';
 import { DecisionSource, canTransitionChallenge } from '@vcp/domain';
 import type { EventPublisher } from '../events/event-publisher.js';
 import { writeAudit } from '../audit/write-audit.js';
+import { writeNotification } from '../notifications/write-notification.js';
 
 const TRANSACTION_TIMEOUT_MS = 20_000;
 const ACCOUNT_ESCROW = 'CHALLENGE_ESCROW';
@@ -169,6 +170,21 @@ export async function selectWinner(
       });
 
       await tx.challenge.update({ where: { id: challengeId }, data: { status: 'WINNER_LOCKED' } });
+
+      // Gewinner benachrichtigen.
+      const winnerSub = await tx.submission.findUnique({
+        where: { id: winnerId },
+        select: { participantId: true },
+      });
+      if (winnerSub !== null) {
+        await writeNotification(tx, {
+          userId: winnerSub.participantId,
+          type: 'challenge.won',
+          challengeId,
+          title: 'Du hast gewonnen! 🎉',
+          body: 'Deine Einsendung wurde als Gewinner ausgewählt. Die Auszahlung wird veranlasst.',
+        });
+      }
 
       await writeAudit(tx, {
         actorType: isAdmin ? 'ADMIN' : 'USER',

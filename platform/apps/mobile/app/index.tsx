@@ -47,6 +47,7 @@ export default function DiscoverScreen() {
       <Row style={{ marginBottom: 8 }}>
         <Button title="+ Erstellen" variant="primary" onPress={() => router.push('/create')} />
         <Button title="Meine" onPress={() => router.push('/me')} />
+        <Button title="Mitteilungen" onPress={() => router.push('/notifications')} />
         <Button title="Profil" onPress={() => router.push('/profile')} />
       </Row>
 
