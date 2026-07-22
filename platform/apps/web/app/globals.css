@@ -1,32 +1,57 @@
+/* Video-Challenges — Web-App auf dem "Organic"-Design-System (claude.ai/design).
+   Warmes cremefarbenes Ground, Terracotta-Akzent + Sage-Zweitakzent, Caprasimo-
+   Überschriften über Figtree, stark gerundet (Pills + weiche Karten). Alle Werte
+   kommen aus den Organic-Tokens; unsere bestehenden Klassennamen sind darauf gemappt. */
+@import url('https://fonts.googleapis.com/css2?family=Caprasimo:wght@400&family=Figtree:wght@400;600;700&display=swap');
+
 :root {
-  color-scheme: light dark;
-  --bg: #fbfbfd;
-  --surface: #ffffff;
-  --surface-2: #f4f4f7;
-  --border: #e3e3ea;
-  --text: #1a1a20;
-  --muted: #6b6b76;
-  --accent: #2f9e44;
-  --accent-ink: #ffffff;
-  --danger: #c92a2a;
-  --shadow: 0 1px 2px rgba(20, 20, 30, 0.06), 0 4px 16px rgba(20, 20, 30, 0.04);
-  --radius: 14px;
+  color-scheme: light;
+  --color-bg: #f5ead8;
+  --color-surface: #ebddc5;
+  --color-text: #201e1d;
+  --color-accent: #c67139;
+  --color-accent-2: #7a8a5e;
+  --color-divider: color-mix(in srgb, #201e1d 16%, transparent);
+
+  --color-neutral-100: #f9f4ed;
+  --color-neutral-200: #eee7db;
+  --color-neutral-300: #dcd3c4;
+  --color-neutral-500: #a19786;
+  --color-neutral-800: #474238;
+
+  --color-accent-100: #fff2eb;
+  --color-accent-600: #b2622d;
+  --color-accent-700: #8c491a;
+  --color-accent-800: #643312;
+
+  --color-accent-2-100: #f0fae1;
+  --color-accent-2-800: #3d472b;
+
+  /* Destruktiv: warmes Brick-Rot, in die Palette eingepasst (Organic hat keine
+     eigene Gefahr-Rolle). */
+  --color-danger: #b23a2a;
+
+  --font-heading: "Caprasimo", system-ui, sans-serif;
+  --font-body: "Figtree", system-ui, sans-serif;
+
+  --space-1: 4.4px;
+  --space-2: 8.8px;
+  --space-3: 13.2px;
+  --space-4: 17.6px;
+  --space-6: 26.4px;
+
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 28px;
+
+  --shadow-sm: 0 1px 2px color-mix(in srgb, #2e2b25 14%, transparent);
+  --shadow-md: 0 3px 10px color-mix(in srgb, #2e2b25 16%, transparent);
+  --shadow-lg: 0 12px 32px color-mix(in srgb, #2e2b25 22%, transparent);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0f0f13;
-    --surface: #17171d;
-    --surface-2: #1f1f27;
-    --border: #2b2b35;
-    --text: #ececf1;
-    --muted: #9a9aa6;
-    --accent: #40c057;
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.25);
-  }
-}
-
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
@@ -37,10 +62,11 @@ body {
 }
 
 body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  line-height: 1.5;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -50,21 +76,28 @@ main {
   padding: 18px 16px 96px;
 }
 
-h1 {
-  font-size: 1.5rem;
-  letter-spacing: -0.01em;
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-heading);
+  font-weight: 400;
+  line-height: 1.12;
+  letter-spacing: -0.015em;
   margin: 0.2em 0 0.5em;
 }
-
+h1 {
+  font-size: 2rem;
+}
 h2 {
-  font-size: 1.12rem;
-  letter-spacing: -0.01em;
+  font-size: 1.4rem;
   margin: 1.4em 0 0.6em;
 }
 
 a {
-  color: var(--accent);
+  color: var(--color-accent);
   text-decoration: none;
+  text-underline-offset: 3px;
 }
 a:hover {
   text-decoration: underline;
@@ -74,14 +107,25 @@ p {
   margin: 0.5em 0;
 }
 
-/* ---------- Top bar ---------- */
+:focus {
+  outline: none;
+}
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+::selection {
+  background: color-mix(in srgb, var(--color-accent) 30%, transparent);
+}
+
+/* ---------- Top bar (Organic .nav) ---------- */
 .topbar {
   position: sticky;
   top: 0;
   z-index: 20;
-  background: color-mix(in srgb, var(--bg) 88%, transparent);
-  backdrop-filter: saturate(180%) blur(12px);
-  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--color-bg) 88%, transparent);
+  backdrop-filter: saturate(140%) blur(12px);
+  border-bottom: 1px solid var(--color-divider);
 }
 .topbar-inner {
   max-width: 720px;
@@ -92,9 +136,10 @@ p {
   gap: 12px;
 }
 .brand {
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--text);
+  font-family: var(--font-heading);
+  font-weight: 400;
+  font-size: 1.25rem;
+  color: var(--color-text);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -103,31 +148,33 @@ p {
   text-decoration: none;
 }
 .brand .dot {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   border-radius: 999px;
-  background: var(--accent);
+  background: var(--color-accent);
   display: inline-block;
 }
 .topbar nav {
   display: flex;
-  gap: 4px;
+  gap: 2px;
   margin-left: auto;
   align-items: center;
+  flex-wrap: wrap;
 }
 .navlink {
-  color: var(--muted);
+  color: color-mix(in srgb, var(--color-text) 62%, transparent);
   padding: 6px 10px;
-  border-radius: 8px;
+  border-radius: 999px;
   font-size: 0.9rem;
 }
 .navlink:hover {
-  background: var(--surface-2);
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
   text-decoration: none;
 }
 .navlink.active {
-  color: var(--text);
-  background: var(--surface-2);
+  color: var(--color-bg);
+  background: var(--color-accent);
 }
 
 /* ---------- Session widget ---------- */
@@ -142,137 +189,164 @@ p {
   padding: 0 16px 12px;
 }
 .settings-card {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-lg);
   padding: 12px 14px;
 }
 
 /* ---------- Cards ---------- */
 .card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px;
+  background: var(--color-surface);
+  border-radius: calc(var(--radius-lg) * 1.1);
+  padding: var(--space-4);
   margin-bottom: 12px;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 .card.tap {
   display: block;
   color: inherit;
-  transition: transform 0.08s ease, border-color 0.12s ease;
+  transition: transform 0.08s ease, box-shadow 0.14s ease;
 }
 .card.tap:hover {
   text-decoration: none;
-  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  box-shadow: var(--shadow-md);
   transform: translateY(-1px);
 }
 
 .hero {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, var(--surface)), var(--surface));
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 20px;
+  background:
+    radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--color-accent) 22%, var(--color-surface)), var(--color-surface));
+  border-radius: calc(var(--radius-lg) * 1.1);
+  padding: 22px;
   margin-bottom: 18px;
 }
 .hero h1 {
   margin-top: 0;
 }
 .hero p {
-  color: var(--muted);
+  color: color-mix(in srgb, var(--color-text) 62%, transparent);
   max-width: 44ch;
 }
 
-/* ---------- Labels / inputs ---------- */
+/* ---------- Labels / inputs (Organic .input, pill) ---------- */
 label {
   display: flex;
   flex-direction: column;
-  font-size: 0.8rem;
-  color: var(--muted);
-  gap: 4px;
+  font-size: 0.78rem;
+  color: color-mix(in srgb, var(--color-text) 70%, transparent);
+  gap: 5px;
 }
 input,
 select,
-textarea,
-button {
+textarea {
   font: inherit;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface);
-  color: var(--text);
-}
-input:focus,
-select:focus,
-textarea:focus {
-  outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
-  outline-offset: 1px;
-  border-color: var(--accent);
+  font-size: 0.92rem;
+  width: 100%;
+  padding: 10px 16px;
+  color: var(--color-text);
+  caret-color: var(--color-accent);
+  background: var(--color-surface);
+  border: 1px solid var(--color-divider);
+  border-radius: 999px;
 }
 textarea {
+  border-radius: var(--radius-md);
   resize: vertical;
-  min-height: 76px;
+  min-height: 84px;
+}
+input:hover,
+select:hover,
+textarea:hover {
+  border-color: color-mix(in srgb, var(--color-text) 45%, transparent);
+}
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  border-color: var(--color-accent);
+  outline-offset: 0;
 }
 
+/* ---------- Buttons (Organic .btn, pill, display font) ---------- */
 button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   cursor: pointer;
-  font-weight: 600;
-  transition: filter 0.12s ease, opacity 0.12s ease;
+  font-family: var(--font-heading);
+  font-weight: 400;
+  font-size: 0.9rem;
+  line-height: 1.2;
+  color: var(--color-text);
+  background: transparent;
+  border: 1px solid var(--color-divider);
+  padding: 9px 16px;
+  border-radius: 999px;
+  transition: background 0.12s ease, opacity 0.12s ease;
 }
 button:hover:not(:disabled) {
-  filter: brightness(1.03);
+  background: color-mix(in srgb, var(--color-text) 7%, transparent);
 }
 button.primary {
-  background: var(--accent);
-  color: var(--accent-ink);
-  border-color: var(--accent);
+  background: var(--color-accent);
+  color: var(--color-bg);
+  border-color: var(--color-accent);
+}
+button.primary:hover:not(:disabled) {
+  background: var(--color-accent-600);
+}
+button.primary:active {
+  background: var(--color-accent-700);
 }
 button.ghost {
-  background: var(--surface-2);
-}
-button.danger {
-  color: var(--danger);
-  border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
   background: transparent;
 }
+button.danger {
+  color: var(--color-danger);
+  border-color: color-mix(in srgb, var(--color-danger) 45%, var(--color-divider));
+  background: transparent;
+}
+button.danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-danger) 10%, transparent);
+}
 button.sm {
-  padding: 6px 10px;
-  font-size: 0.85rem;
-  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.82rem;
 }
 button:disabled {
   opacity: 0.45;
   cursor: default;
 }
 
-/* ---------- Badges ---------- */
+/* ---------- Badges (Organic .tag) ---------- */
 .badge {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 2px 10px;
+  padding: 3px 11px;
   border-radius: 999px;
-  border: 1px solid var(--border);
-  font-size: 0.76rem;
+  font-size: 0.74rem;
+  letter-spacing: 0.02em;
   font-weight: 600;
-  background: var(--surface-2);
-  color: var(--muted);
+  background: var(--color-neutral-100);
+  color: var(--color-neutral-800);
   white-space: nowrap;
 }
 .badge.open {
-  background: color-mix(in srgb, var(--accent) 16%, var(--surface));
-  color: color-mix(in srgb, var(--accent) 78%, var(--text));
-  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+  background: var(--color-accent-100);
+  color: var(--color-accent-800);
 }
 .badge.done {
-  background: color-mix(in srgb, #4263eb 16%, var(--surface));
-  color: color-mix(in srgb, #4263eb 78%, var(--text));
-  border-color: color-mix(in srgb, #4263eb 35%, var(--border));
+  background: var(--color-accent-2-100);
+  color: var(--color-accent-2-800);
 }
 .badge.warn {
-  background: color-mix(in srgb, var(--danger) 12%, var(--surface));
-  color: color-mix(in srgb, var(--danger) 80%, var(--text));
-  border-color: color-mix(in srgb, var(--danger) 30%, var(--border));
+  background: color-mix(in srgb, var(--color-danger) 14%, var(--color-bg));
+  color: color-mix(in srgb, var(--color-danger) 82%, var(--color-text));
 }
 
 /* ---------- Layout helpers ---------- */
@@ -294,26 +368,26 @@ button:disabled {
   gap: 10px;
 }
 .muted {
-  color: var(--muted);
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
 }
 .error {
-  color: var(--danger);
+  color: var(--color-danger);
 }
 .note {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 10px 12px;
-  color: var(--muted);
+  background: var(--color-neutral-100);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  color: color-mix(in srgb, var(--color-text) 62%, transparent);
   font-size: 0.9rem;
 }
 .prize {
-  font-weight: 700;
-  font-size: 1.05rem;
+  font-family: var(--font-heading);
+  font-weight: 400;
+  font-size: 1.15rem;
+  color: var(--color-accent-700);
 }
 code {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
+  background: var(--color-neutral-200);
   border-radius: 6px;
   padding: 1px 6px;
   font-size: 0.85em;
@@ -322,16 +396,15 @@ code {
 
 /* ---------- Slot progress ---------- */
 .progress {
-  height: 8px;
+  height: 9px;
   border-radius: 999px;
-  background: var(--surface-2);
+  background: var(--color-neutral-300);
   overflow: hidden;
-  border: 1px solid var(--border);
 }
 .progress > span {
   display: block;
   height: 100%;
-  background: var(--accent);
+  background: var(--color-accent);
 }
 
 /* ---------- Submission list ---------- */
@@ -340,9 +413,9 @@ code {
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
 }
 .sub .who {
   font-variant-numeric: tabular-nums;
@@ -351,15 +424,14 @@ code {
   margin-left: auto;
 }
 .avatar {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border-radius: 999px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
+  background: var(--color-accent-100);
   display: grid;
   place-items: center;
   font-size: 0.8rem;
   font-weight: 700;
-  color: var(--muted);
+  color: var(--color-accent-800);
   flex: none;
 }

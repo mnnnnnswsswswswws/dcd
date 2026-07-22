@@ -1,15 +1,16 @@
-/** Zentrale Farb-/Abstands-Token der Mobile-App (mobil, kompakt, ein Akzent). */
+/** Farb-/Token-Palette der Mobile-App — auf dem "Organic"-Design-System
+ *  (claude.ai/design): warmes cremefarbenes Ground, Terracotta-Akzent, Sage-Zweitakzent. */
 export const colors = {
-  bg: '#fbfbfd',
-  surface: '#ffffff',
-  surface2: '#f2f2f6',
-  border: '#e3e3ea',
-  text: '#1a1a20',
-  muted: '#6b6b76',
-  accent: '#2f9e44',
-  accentInk: '#ffffff',
-  danger: '#c92a2a',
-  blue: '#4263eb',
+  bg: '#f5ead8',
+  surface: '#ebddc5',
+  surface2: '#f9f4ed',
+  border: 'rgba(32,30,29,0.16)',
+  text: '#201e1d',
+  muted: '#6a6459',
+  accent: '#c67139',
+  accentInk: '#f5ead8',
+  danger: '#b23a2a',
+  blue: '#7a8a5e', // Zweitakzent (Sage) für "erledigt"-Zustände
 };
 
 export type Tone = 'open' | 'done' | 'warn' | 'neutral';

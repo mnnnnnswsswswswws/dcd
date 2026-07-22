@@ -7,8 +7,8 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const SIZE = 1024;
-const BG = [47, 158, 68]; // #2f9e44
-const FG = [255, 255, 255];
+const BG = [198, 113, 57]; // Organic accent (Terracotta) #c67139
+const FG = [245, 234, 216]; // Organic ground (Creme) #f5ead8
 
 const raw = Buffer.alloc(SIZE * (1 + SIZE * 3));
 const cx = SIZE / 2;
