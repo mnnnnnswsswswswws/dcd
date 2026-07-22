@@ -56,8 +56,8 @@ export default function DiscoverScreen() {
       <Text style={styles.h2}>Offene Challenges</Text>
       {!loading && open.length === 0 && <Muted>Derzeit keine offenen Challenges.</Muted>}
 
-      {open.map((c) => (
-        <Card key={c.id} onPress={() => router.push(`/challenge/${c.id}`)}>
+      {open.map((c, i) => (
+        <Card key={c.id} delay={Math.min(i, 5) * 70} onPress={() => router.push(`/challenge/${c.id}`)}>
           <Row style={{ justifyContent: 'space-between' }}>
             <Text style={styles.title}>{c.title || 'Ohne Titel'}</Text>
             <Text style={styles.prize}>{euro(c.prizeAmountCents)}</Text>
@@ -79,16 +79,21 @@ export default function DiscoverScreen() {
 const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 48 },
   hero: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
+    backgroundColor: colors.glass,
+    borderColor: colors.glassBorder,
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: 18,
     padding: 18,
     marginBottom: 14,
     gap: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.35,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 8,
   },
   heroTitle: { fontSize: 26, fontFamily: fonts.heading, color: colors.text },
   h2: { fontSize: 19, fontFamily: fonts.heading, color: colors.text, marginVertical: 10 },
   title: { fontSize: 16, fontFamily: fonts.bodyBold, color: colors.text, flexShrink: 1 },
-  prize: { fontSize: 17, fontFamily: fonts.heading, color: colors.accent, flexShrink: 0 },
+  prize: { fontSize: 17, fontFamily: fonts.heading, color: colors.green, flexShrink: 0 },
 });

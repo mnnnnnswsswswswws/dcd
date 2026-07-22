@@ -126,7 +126,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 48 },
   h1: { fontSize: 22, fontFamily: fonts.heading, color: colors.text },
-  prize: { fontSize: 19, fontFamily: fonts.heading, color: colors.accent },
+  prize: { fontSize: 19, fontFamily: fonts.heading, color: colors.green },
   label: { fontSize: 13, color: colors.muted, fontFamily: fonts.body },
   input: {
     borderColor: colors.border,

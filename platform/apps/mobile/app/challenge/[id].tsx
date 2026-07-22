@@ -286,7 +286,7 @@ function ReportButton({ submissionId, onDone }: { challengeId: string; submissio
 const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 48 },
   title: { fontSize: 20, fontFamily: fonts.heading, color: colors.text, flexShrink: 1 },
-  prize: { fontSize: 18, fontFamily: fonts.heading, color: colors.accent },
+  prize: { fontSize: 18, fontFamily: fonts.heading, color: colors.green },
   body: { color: colors.text, fontSize: 14, fontFamily: fonts.body },
   sectionLabel: { fontSize: 16, fontFamily: fonts.heading, color: colors.text },
   h2: { fontSize: 19, fontFamily: fonts.heading, color: colors.text, marginVertical: 10 },
