@@ -9,6 +9,25 @@ export const dur = {
   celebrate: 560,
 } as const;
 
+/** Verbindliche Motion-Tokens (docs/design/MOTION_SYSTEM.md, Abschnitt L).
+ *  Werte nach realem Test kalibriert; keine Komponente definiert eigene Zufallswerte. */
+export const motion = {
+  duration: {
+    instant: 80,
+    fast: 140,
+    normal: 220,
+    deliberate: 320,
+    celebration: 650,
+  },
+  // RN Animated.spring nutzt speed/bounciness; die damping/stiffness-Absicht ist
+  // hier auf äquivalente RN-Parameter abgebildet.
+  spring: {
+    press: { speed: 40, bounciness: 12 },
+    sheet: { speed: 14, bounciness: 4 },
+    cardExpand: { speed: 12, bounciness: 8 },
+  },
+} as const;
+
 export const springs = {
   press: { speed: 40, bounciness: 12 },
   enter: { speed: 12, bounciness: 9 },
