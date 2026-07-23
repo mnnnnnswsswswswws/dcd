@@ -1,5 +1,5 @@
-import { Caprasimo_400Regular } from '@expo-google-fonts/caprasimo';
 import { Figtree_400Regular, Figtree_600SemiBold, Figtree_700Bold } from '@expo-google-fonts/figtree';
+import { Unbounded_700Bold } from '@expo-google-fonts/unbounded';
 import { useFonts } from 'expo-font';
 import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -25,7 +25,7 @@ const GlassTheme = {
 
 export default function RootLayout() {
   const [loaded] = useFonts({
-    Caprasimo_400Regular,
+    Unbounded_700Bold,
     Figtree_400Regular,
     Figtree_600SemiBold,
     Figtree_700Bold,

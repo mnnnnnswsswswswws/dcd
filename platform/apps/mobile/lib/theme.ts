@@ -24,9 +24,10 @@ export const gradients = {
   avatar: ['#6d5cff', '#22d3ee'] as const,
 };
 
-/** Schriftfamilien (nativ via expo-font geladen). */
+/** Schriftfamilien (nativ via expo-font geladen). Display = Unbounded (identisch mit
+ *  Web/Admin) für Titel, Preisgeld und CTAs; Figtree als Body. */
 export const fonts = {
-  heading: 'Caprasimo_400Regular',
+  heading: 'Unbounded_700Bold',
   body: 'Figtree_400Regular',
   bodySemibold: 'Figtree_600SemiBold',
   bodyBold: 'Figtree_700Bold',
