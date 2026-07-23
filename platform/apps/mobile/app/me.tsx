@@ -79,5 +79,5 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 48 },
   h2: { fontSize: 19, fontFamily: fonts.heading, color: colors.text, marginVertical: 10 },
   title: { fontSize: 16, fontFamily: fonts.bodyBold, color: colors.text, flexShrink: 1 },
-  prize: { fontSize: 17, fontFamily: fonts.heading, color: colors.green },
+  prize: { fontSize: 17, fontFamily: fonts.heading, color: colors.gold },
 });

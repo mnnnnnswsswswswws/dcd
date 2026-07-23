@@ -10,7 +10,6 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, fonts, gradients, statusTone, toneColor } from '../lib/theme';
 import { statusLabel } from '../lib/api';
@@ -50,32 +49,44 @@ export function FadeInUp({
   );
 }
 
-/** Animierter Aurora-Hintergrund: zwei weiche Farbwolken (Lila/Cyan), die langsam
- *  driften — darüber ein starker Blur, der sie zu Licht verschmilzt. */
-export function Aurora() {
-  const drift = useRef(new Animated.Value(0)).current;
+/** Ember-Hintergrund: Feuerschein von unten + Vignette an den Rändern. Kein Blur,
+ *  kein Aurora — warmes, cinematisches Material, das langsam „atmet". */
+export function EmberBackground() {
+  const glow = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
-        Animated.timing(drift, { toValue: 1, duration: 14000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(drift, { toValue: 0, duration: 14000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(glow, { toValue: 1, duration: 5000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(glow, { toValue: 0, duration: 5000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
       ]),
     ).start();
-  }, [drift]);
+  }, [glow]);
 
-  const a = drift.interpolate({ inputRange: [0, 1], outputRange: [0, 70] });
-  const b = drift.interpolate({ inputRange: [0, 1], outputRange: [0, -60] });
+  const opacity = glow.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1] });
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      <Animated.View style={[styles.blob, styles.blobViolet, { transform: [{ translateX: a }, { translateY: a }] }]} />
-      <Animated.View style={[styles.blob, styles.blobCyan, { transform: [{ translateX: b }, { translateY: b }] }]} />
-      <BlurView intensity={90} tint="dark" experimentalBlurMethod="dimezisBlurView" style={StyleSheet.absoluteFill} />
+      {/* Grundton */}
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.bg }]} />
+      {/* Feuerschein von unten (pulsiert dezent) */}
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity }]}>
+        <LinearGradient
+          colors={['transparent', 'rgba(255,90,31,0.14)', 'rgba(255,138,43,0.22)']}
+          locations={[0.45, 0.82, 1]}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
+      {/* Cinematische Vignette (dunkle Ecken) */}
+      <LinearGradient
+        colors={['rgba(0,0,0,0.5)', 'transparent', 'transparent', 'rgba(0,0,0,0.55)']}
+        locations={[0, 0.22, 0.7, 1]}
+        style={StyleSheet.absoluteFill}
+      />
     </View>
   );
 }
 
-/** Glas-Karte: Transluzenz + helle Kante, gleitet beim Mount ein, federt beim Druck. */
+/** Matte Karte: warme Fläche + haarfeine Kante, gleitet beim Mount ein, federt beim Druck. */
 export function Card({
   children,
   style,
@@ -187,67 +198,59 @@ export function Row({ children, style }: { children: ReactNode; style?: StylePro
 
 export const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.glass,
-    borderColor: colors.glassBorder,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: 18,
+    borderRadius: 20,
     padding: 16,
     marginBottom: 12,
     gap: 10,
     shadowColor: '#000',
-    shadowOpacity: 0.35,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 12 },
     elevation: 8,
   },
   badge: {
     borderWidth: 1,
-    borderRadius: 999,
+    borderRadius: 8,
     paddingHorizontal: 10,
-    paddingVertical: 3,
+    paddingVertical: 4,
     alignSelf: 'flex-start',
   },
-  badgeText: { fontSize: 12, fontFamily: fonts.bodySemibold },
+  badgeText: {
+    fontSize: 11,
+    fontFamily: fonts.bodyBold,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
   button: {
     borderWidth: 1,
-    borderColor: colors.glassBorder,
+    borderColor: colors.borderStrong,
     backgroundColor: colors.surface2,
     borderRadius: 12,
-    paddingVertical: 11,
+    paddingVertical: 12,
     paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
     minWidth: 96,
   },
   buttonPrimary: {
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.28)',
+    borderWidth: 0,
     backgroundColor: 'transparent',
-    shadowColor: '#7c4dff',
-    shadowOpacity: 0.5,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
+    shadowColor: colors.ember,
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
     elevation: 10,
   },
-  buttonText: { fontFamily: fonts.heading, fontSize: 15 },
+  buttonText: {
+    fontFamily: fonts.heading,
+    fontSize: 14,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
   muted: { color: colors.muted, fontSize: 13, fontFamily: fonts.body },
   error: { color: colors.danger, fontSize: 14, fontFamily: fonts.body },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  blob: {
-    position: 'absolute',
-    width: 420,
-    height: 420,
-    borderRadius: 210,
-    opacity: 0.55,
-  },
-  blobViolet: {
-    backgroundColor: 'rgba(124,77,255,0.55)',
-    top: -140,
-    left: -120,
-  },
-  blobCyan: {
-    backgroundColor: 'rgba(34,211,238,0.35)',
-    bottom: -160,
-    right: -120,
-  },
 });

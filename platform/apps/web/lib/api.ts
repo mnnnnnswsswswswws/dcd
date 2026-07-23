@@ -202,18 +202,27 @@ export function categoryEmoji(category: string | null, title: string): string {
   return '🎬';
 }
 
-/** Deterministische Farbwelt je Challenge-ID: tiefes Blau/Violett als Basis plus
- *  ein warmer "Abenteuer-Glow" (Radial oben), der Neugier weckt — jedes Item wirkt
- *  wie ein eigener Schauplatz, bleibt aber in der Markenwelt. */
+/** Deterministische Expeditions-Schauplätze je Challenge-ID — alle in der warmen
+ *  Ember-Welt (Canyon, Golden Hour, Lagerfeuer, Nachtwald, Wüstendämmerung), damit
+ *  jedes Item wie ein eigenes Poster wirkt, aber nie kalt/blau. Feuerschein von oben,
+ *  tiefes warmes Ink unten. */
 export function feedGradient(id: string): string {
   let n = 0;
   for (let i = 0; i < id.length; i++) n = (n * 31 + id.charCodeAt(i)) % 1000;
-  const h = 205 + (n % 80); // 205–285: Blau bis Violett
-  const h2 = h + 25;
-  const glow = [16, 292, 168, 42][n % 4]; // Amber, Magenta, Smaragd, Gold — der Funke
+  // Warme Schauplatz-Paletten: [oberer Ton (Feuerschein), mittlerer Erdton].
+  const scenes: Array<[string, string]> = [
+    ['28 90% 42%', '18 70% 16%'], // Canyon-Sonnenaufgang (Ocker→Rost)
+    ['42 95% 46%', '30 68% 15%'], // Golden Hour (Gold→Bernstein)
+    ['12 88% 40%', '8 62% 13%'], // Lagerfeuer (Ember-Rot→Kohle)
+    ['96 34% 26%', '140 30% 10%'], // Nachtwald (Moos→Tannendunkel)
+    ['20 78% 38%', '350 40% 13%'], // Wüstendämmerung (Terracotta→Weinrot)
+    ['48 60% 40%', '36 55% 12%'], // Sanddüne (Messing→Umbra)
+  ];
+  const [top, mid] = scenes[n % scenes.length];
+  const x = 30 + (n % 40);
   return [
-    `radial-gradient(90% 60% at ${25 + (n % 50)}% 0%, hsl(${glow} 85% 55% / 0.28), transparent 60%)`,
-    `linear-gradient(165deg, hsl(${h} 62% 26%), hsl(${h2} 66% 13%) 68%, #0b0b12)`,
+    `radial-gradient(100% 70% at ${x}% 0%, hsl(${top} / 0.55), transparent 62%)`,
+    `linear-gradient(168deg, hsl(${mid}) 0%, #14100c 72%, #100d0b 100%)`,
   ].join(', ');
 }
 

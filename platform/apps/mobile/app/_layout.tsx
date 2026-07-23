@@ -5,13 +5,13 @@ import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Aurora } from '../components/ui';
+import { EmberBackground } from '../components/ui';
 import { SessionProvider } from '../lib/session';
 import { colors, fonts } from '../lib/theme';
 
-/** Navigations-Theme: transparenter Screen-Hintergrund, damit die Aurora hinter
- *  allen Screens durchscheint (react-navigation legt sonst helles Grau darüber). */
-const GlassTheme = {
+/** Navigations-Theme: transparenter Screen-Hintergrund, damit der Ember-Schein hinter
+ *  allen Screens durchscheint (react-navigation legt sonst helles Grau darueber). */
+const EmberTheme = {
   ...DarkTheme,
   colors: {
     ...DarkTheme.colors,
@@ -41,11 +41,11 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <SessionProvider>
         <StatusBar style="light" />
-        {/* Aurora liegt hinter allen Screens; die Screens selbst sind transparent,
-            damit die Glas-Flächen etwas zum Durchscheinen haben. */}
+        {/* Ember-Schein liegt hinter allen Screens; die Screens selbst sind transparent,
+            damit der warme Schein durchscheint. */}
         <View style={{ flex: 1, backgroundColor: colors.bg }}>
-          <Aurora />
-          <ThemeProvider value={GlassTheme}>
+          <EmberBackground />
+          <ThemeProvider value={EmberTheme}>
             <Stack
               screenOptions={{
                 headerStyle: { backgroundColor: colors.bg },
