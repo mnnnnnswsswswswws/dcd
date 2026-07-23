@@ -6,6 +6,10 @@ export const metadata = {
   description: 'Admin-Oberfläche für Moderation, Auswahl und Auszahlung.',
 };
 
+export const viewport = {
+  themeColor: '#0b0b12',
+};
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="de">
