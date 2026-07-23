@@ -1,44 +1,23 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { getToken, register, subscribeSession } from '../lib/api';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { api, avatarColor, categoryEmoji, euro, getToken, subscribeSession, type ChallengeSummary } from '../lib/api';
 
 const ONBOARDED_KEY = 'vcp.onboarded';
 
-/** Reibungsloses Onboarding: kurzer Value-Slider → Anmeldung in einem Schritt →
- *  direkt in den Feed. Erscheint beim ersten Besuch (kein Token, noch nicht gesehen)
- *  und lässt sich jederzeit überspringen. Bewusst wenig Reibung: nur 18+ und ein
- *  optionaler Nutzername. */
-const SLIDES = [
-  {
-    emoji: '🎬',
-    title: 'Entdecke Challenges',
-    text: 'Wisch dich durch Video-Challenges mit echtem Preisgeld — Sport, Kochen, Kreatives. Jeden Tag Neues.',
-    tint: '#7aa2f7',
-  },
-  {
-    emoji: '🎥',
-    title: 'Mach mit — direkt in der App',
-    text: 'Sichere dir einen Platz und nimm deinen Beweis in der App auf. Kein Galerie-Import, kein Schnitt, kein Fake.',
-    tint: '#5ec2a0',
-  },
-  {
-    emoji: '🏆',
-    title: 'Gewinne echtes Preisgeld',
-    text: 'Community-Voting oder der Ersteller kürt den Gewinner. Fair, transparent — und ausgezahlt.',
-    tint: '#d3a24a',
-  },
-];
-
+/**
+ * Onboarding — Abschnitt 1: „Der Reveal".
+ * Kein Erklär-Intro. Kalter Einstieg auf ECHTE, laufende Challenges (aus der API,
+ * nach Preisgeld sortiert): hochzählendes Preisgeld als Held, echter Live-Beleg
+ * (Teilnehmerzahl, Restplätze, Frist, Likes), eine Hauptaktion. Wert wird gefühlt,
+ * nicht erklärt. Registrierung passiert NICHT hier — der Nutzer landet danach im
+ * echten Feed und meldet sich erst bei Teilnahme an.
+ */
 export function Onboarding() {
   const [show, setShow] = useState(false);
-  const [step, setStep] = useState(0); // 0..2 Slides, 3 = Anmeldung
-  const [adult, setAdult] = useState(false);
-  const [username, setUsername] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [items, setItems] = useState<ChallengeSummary[] | null>(null);
+  const [i, setI] = useState(0);
 
-  // Nur beim ersten Besuch zeigen: kein Token und noch nicht abgeschlossen/übersprungen.
   useEffect(() => {
     const decide = () => {
       const seen = typeof window !== 'undefined' && window.localStorage.getItem(ONBOARDED_KEY);
@@ -48,6 +27,20 @@ export function Onboarding() {
     return subscribeSession(decide);
   }, []);
 
+  // Echte Challenges laden, wenn das Onboarding sichtbar ist.
+  useEffect(() => {
+    if (!show || items !== null) return;
+    void (async () => {
+      try {
+        const list = await api<ChallengeSummary[]>('/v1/challenges?status=OPEN', { auth: false });
+        const top = [...list].sort((a, b) => b.prizeAmountCents - a.prizeAmountCents).slice(0, 3);
+        setItems(top);
+      } catch {
+        setItems([]);
+      }
+    })();
+  }, [show, items]);
+
   if (!show) return null;
 
   function finish() {
@@ -55,82 +48,162 @@ export function Onboarding() {
     setShow(false);
   }
 
-  const isSignup = step === SLIDES.length;
-
-  async function start() {
-    setBusy(true);
-    setError(null);
-    try {
-      await register(username);
-      finish(); // Session-Event bringt Feed/Nav automatisch in den angemeldeten Zustand.
-    } catch (e) {
-      setError((e as Error).message);
-      setBusy(false);
-    }
+  // Ladezustand: Produkt-Skeleton, kein Spinner.
+  if (items === null) {
+    return (
+      <div className="onb" role="dialog" aria-modal="true" aria-label="Wird geladen">
+        <div className="rv">
+          <div className="skel" style={{ width: 120, height: 20, borderRadius: 999 }} />
+          <div className="skel" style={{ width: '80%', height: 34, marginTop: 22 }} />
+          <div className="skel" style={{ width: 180, height: 70, marginTop: 16 }} />
+          <div className="skel" style={{ width: '90%', height: 44, marginTop: 24, borderRadius: 12 }} />
+        </div>
+      </div>
+    );
   }
 
+  // Leerzustand: ehrlich und einladend, keine Sackgasse.
+  if (items.length === 0) {
+    return (
+      <div className="onb" role="dialog" aria-modal="true" aria-label="Willkommen">
+        <div className="rv rv-empty">
+          <div className="rv-kicker"><span className="rv-dot" /> Noch ruhig hier</div>
+          <h1 className="rv-title">Sei die oder der Erste.</h1>
+          <p className="rv-line">Gerade läuft keine Challenge. Starte deine eigene — setz ein Preisgeld aus und schau, wer sich traut.</p>
+          <div className="rv-actions">
+            <a className="onb-primary" href="/create" onClick={finish}>Challenge starten</a>
+            <button className="onb-back" onClick={finish}>Erst mal umsehen</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const c = items[i];
+  const last = i === items.length - 1;
+
   return (
-    <div className="onb" role="dialog" aria-modal="true" aria-label="Willkommen">
-      <button className="onb-skip" onClick={finish} aria-label="Überspringen">
-        Überspringen
-      </button>
-
-      {!isSignup ? (
-        <div className="onb-stage" key={step}>
-          <div className="onb-art" style={{ background: `radial-gradient(circle at 50% 42%, ${SLIDES[step].tint}33, transparent 68%)` }}>
-            <span className="onb-emoji">{SLIDES[step].emoji}</span>
-          </div>
-          <h2 className="onb-title">{SLIDES[step].title}</h2>
-          <p className="onb-text">{SLIDES[step].text}</p>
-        </div>
-      ) : (
-        <div className="onb-stage" key="signup">
-          <div className="onb-art" style={{ background: 'radial-gradient(circle at 50% 42%, #46c98a33, transparent 68%)' }}>
-            <span className="onb-emoji">🚀</span>
-          </div>
-          <h2 className="onb-title">Bereit? Los geht&apos;s.</h2>
-          <p className="onb-text">Nur noch eins: bestätige dein Alter und wähl einen Namen (kannst du später ändern).</p>
-          <div className="onb-form">
-            <label className="onb-check">
-              <input type="checkbox" checked={adult} onChange={(e) => setAdult(e.target.checked)} />
-              <span>Ich bin 18 Jahre oder älter</span>
-            </label>
-            <input
-              className="onb-input"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Nutzername (optional)"
-              maxLength={20}
-              autoComplete="off"
-            />
-            {error && <p className="error" style={{ margin: 0 }}>{error}</p>}
-          </div>
-        </div>
-      )}
-
-      <div className="onb-dots">
-        {SLIDES.map((_, i) => (
-          <span key={i} className={`onb-dot${i === Math.min(step, SLIDES.length - 1) && !isSignup ? ' on' : ''}${isSignup ? '' : ''}`} />
-        ))}
-        <span className={`onb-dot${isSignup ? ' on' : ''}`} />
+    <div className="onb" role="dialog" aria-modal="true" aria-label="Gerade live">
+      <div className="onb-top">
+        <span className="rv-kicker"><span className="rv-dot" /> Gerade live</span>
+        <button className="onb-skip" onClick={finish}>Überspringen</button>
       </div>
 
-      <div className="onb-actions">
-        {!isSignup ? (
-          <button className="onb-primary" onClick={() => setStep((s) => s + 1)}>
-            {step === SLIDES.length - 1 ? 'Anmelden' : 'Weiter'}
-          </button>
-        ) : (
-          <button className="onb-primary" onClick={start} disabled={!adult || busy}>
-            {busy ? 'Einen Moment…' : 'Los geht’s'}
-          </button>
-        )}
-        {step > 0 && (
-          <button className="onb-back" onClick={() => setStep((s) => s - 1)}>
-            Zurück
-          </button>
+      <RevealCard key={c.id} c={c} />
+
+      <div className="onb-dots" aria-hidden>
+        {items.map((it, k) => (
+          <span key={it.id} className={`onb-dot-nav${k === i ? ' on' : ''}`} />
+        ))}
+      </div>
+
+      <div className="rv-actions">
+        <button
+          className="onb-primary"
+          onClick={() => (last ? finish() : setI((v) => v + 1))}
+        >
+          {last ? 'Los, mein Feed' : 'Nächste ansehen'}
+          <span aria-hidden> →</span>
+        </button>
+        {i > 0 && (
+          <button className="onb-back" onClick={() => setI((v) => v - 1)}>Zurück</button>
         )}
       </div>
     </div>
   );
+}
+
+/** Eine echte Challenge, cinematisch: Held-Zahl (Preisgeld) + Live-Beleg. */
+function RevealCard({ c }: { c: ChallengeSummary }) {
+  const euros = Math.round(c.prizeAmountCents / 100);
+  const shown = useCountUp(euros);
+  const free = Math.max(0, c.maxSlots - (c.occupiedSlots ?? 0));
+  const joined = c.occupiedSlots ?? 0;
+  const handle = c.creator?.username ?? c.creator?.displayName?.replace(/\s+/g, '').toLowerCase() ?? 'creator';
+  const days = useMemo(() => deadlineDays(c.submissionDeadline), [c.submissionDeadline]);
+
+  // Bis zu 5 Identitäts-Punkte, Anzahl = echte Teilnehmerzahl.
+  const dots = Array.from({ length: Math.min(joined, 5) }, (_, k) => avatarColor(`${c.id}:${k}`));
+
+  return (
+    <div className="rv">
+      <div className="rv-cat">
+        <span className="rv-cat-glyph">{categoryEmoji(c.category, c.title)}</span>
+        {c.category ?? 'Challenge'}
+      </div>
+
+      <h1 className="rv-title">{c.title || 'Ohne Titel'}</h1>
+
+      <div className="rv-prize">
+        <span className="rv-prize-label">Preisgeld · zu gewinnen</span>
+        <span className="rv-prize-num">{euro(shown * 100)}</span>
+      </div>
+
+      <p className="rv-line">
+        Zeig, was du drauf hast — nimm deinen Beweis in der App auf. Die Community kürt den
+        Gewinner. Das Preisgeld ist echt.
+      </p>
+
+      <div className="rv-proof">
+        {joined > 0 ? (
+          <div className="rv-crowd">
+            <span className="rv-avatars">
+              {dots.map((col, k) => (
+                <span key={k} className="rv-av" style={{ background: col, zIndex: 5 - k }} />
+              ))}
+            </span>
+            <span className="rv-proof-txt">
+              <strong>{joined}</strong> {joined === 1 ? 'ist' : 'sind'} dabei · {free} frei
+            </span>
+          </div>
+        ) : (
+          <span className="rv-proof-txt">
+            <strong>Sei die oder der Erste</strong> · {free} Plätze frei
+          </span>
+        )}
+        <span className="rv-meta">
+          {days !== null && <span className="rv-chip">endet in {days} {days === 1 ? 'Tag' : 'Tagen'}</span>}
+          <span className="rv-by">
+            <span className="rv-av rv-av-solo" style={{ background: avatarColor('@' + handle) }}>
+              {handle.charAt(0).toUpperCase()}
+            </span>
+            @{handle}
+          </span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** Zählt weich auf den Zielwert hoch (ease-out). Respektiert reduced-motion. */
+function useCountUp(target: number): number {
+  const [val, setVal] = useState(0);
+  const raf = useRef<number | null>(null);
+  useEffect(() => {
+    const reduce = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (reduce || target <= 0) {
+      setVal(target);
+      return;
+    }
+    const start = performance.now();
+    const dur = 900;
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / dur);
+      const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+      setVal(Math.round(eased * target));
+      if (t < 1) raf.current = requestAnimationFrame(tick);
+    };
+    raf.current = requestAnimationFrame(tick);
+    return () => {
+      if (raf.current) cancelAnimationFrame(raf.current);
+    };
+  }, [target]);
+  return val;
+}
+
+function deadlineDays(iso: string | null): number | null {
+  if (!iso) return null;
+  const ms = new Date(iso).getTime() - Date.now();
+  if (ms <= 0) return 0;
+  return Math.max(1, Math.ceil(ms / 86_400_000));
 }

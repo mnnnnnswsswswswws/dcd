@@ -650,132 +650,235 @@ code {
   to { background-position: -220% 0; }
 }
 
-/* ---------- Onboarding (Vollbild-Overlay) ---------- */
+/* ---------- Onboarding · „Der Reveal" (Vollbild) ----------
+   Bühne für ECHTE Challenges. Ein Fokus: das Preisgeld. Live-Beleg statt Deko. */
 .onb {
   position: fixed;
   inset: 0;
   z-index: 200;
-  background: var(--bg);
+  background:
+    radial-gradient(120% 70% at 50% 8%, rgba(70, 201, 138, 0.1), transparent 60%),
+    var(--bg);
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: calc(env(safe-area-inset-top, 0px) + 20px) 24px calc(env(safe-area-inset-bottom, 0px) + 24px);
+  padding: calc(env(safe-area-inset-top, 0px) + 18px) 22px calc(env(safe-area-inset-bottom, 0px) + 22px);
   animation: fade 0.25s var(--ease) both;
 }
+.onb-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
 .onb-skip {
-  position: absolute;
-  top: calc(env(safe-area-inset-top, 0px) + 16px);
-  right: 18px;
   background: transparent;
   border: none;
-  color: var(--muted);
-  font-size: 0.86rem;
+  color: var(--faint);
+  font-size: 0.84rem;
   font-weight: 600;
-  padding: 6px 8px;
+  padding: 6px 4px;
 }
 .onb-skip:hover:not(:disabled) {
   background: transparent;
   transform: none;
-  color: var(--text);
+  color: var(--muted);
 }
-.onb-stage {
+
+/* Live-Kicker mit pulsierendem Punkt (Funktion: „läuft jetzt"). */
+.rv-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.rv-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 0 rgba(70, 201, 138, 0.6);
+  animation: live 2s ease-out infinite;
+}
+
+/* Die Bühne: echte Challenge, ein klarer Mittelpunkt (Preisgeld). */
+.rv {
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
-  text-align: center;
-  max-width: 420px;
-  gap: 10px;
-  animation: pop-in 0.4s var(--spring) both;
+  max-width: 460px;
+  width: 100%;
+  margin: 0 auto;
+  animation: pop-in 0.42s var(--spring) both;
 }
-.onb-art {
-  width: 200px;
-  height: 200px;
-  display: grid;
-  place-items: center;
-  margin-bottom: 8px;
+.rv-cat {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  padding: 6px 12px 6px 8px;
+  border-radius: 999px;
 }
-.onb-emoji {
-  font-size: 5.5rem;
-  animation: bob 4s ease-in-out infinite;
+.rv-cat-glyph {
+  font-size: 1rem;
 }
-.onb-title {
-  font-family: var(--font);
-  font-size: 1.6rem;
+.rv-title {
+  font-size: 2rem;
   font-weight: 800;
-  letter-spacing: -0.01em;
-  margin: 0;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  margin: 16px 0 0;
 }
-.onb-text {
+/* Held-Zahl: das größte, hellste Element. Geld ist der Star. */
+.rv-prize {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 20px 0 2px;
+}
+.rv-prize-num {
+  font-size: 3.4rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.rv-prize-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.rv-line {
   color: var(--muted);
   font-size: 1rem;
   line-height: 1.55;
-  margin: 0;
-  max-width: 34ch;
+  margin: 14px 0 0;
+  max-width: 40ch;
 }
-.onb-form {
-  width: 100%;
-  max-width: 320px;
+
+/* Live-Beleg: echte Menschen + Knappheit. */
+.rv-proof {
+  margin-top: 22px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  margin-top: 20px;
-  text-align: left;
 }
-.onb-check {
+.rv-crowd {
   display: flex;
-  flex-direction: row;
   align-items: center;
   gap: 11px;
-  padding: 14px 16px;
+}
+.rv-avatars {
+  display: inline-flex;
+}
+.rv-av {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid var(--bg);
+  margin-left: -10px;
+  display: inline-grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.82rem;
+  animation: av-in 0.4s var(--spring) both;
+}
+.rv-av:first-child {
+  margin-left: 0;
+}
+.rv-avatars .rv-av:nth-child(2) { animation-delay: 0.05s; }
+.rv-avatars .rv-av:nth-child(3) { animation-delay: 0.1s; }
+.rv-avatars .rv-av:nth-child(4) { animation-delay: 0.15s; }
+.rv-avatars .rv-av:nth-child(5) { animation-delay: 0.2s; }
+@keyframes av-in {
+  from { opacity: 0; transform: scale(0.4); }
+  to { opacity: 1; transform: scale(1); }
+}
+.rv-av-solo {
+  margin: 0;
+  width: 22px;
+  height: 22px;
+  font-size: 0.66rem;
+  border-width: 0;
+}
+.rv-proof-txt {
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+.rv-proof-txt strong {
+  color: var(--text);
+}
+.rv-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+.rv-chip {
+  display: inline-flex;
+  align-items: center;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: 8px;
+  padding: 5px 11px;
+  font-weight: 600;
   color: var(--text);
-  font-size: 0.95rem;
-  font-weight: 500;
-  cursor: pointer;
 }
-.onb-check input {
-  width: 20px;
-  height: 20px;
-  accent-color: var(--accent);
-  flex: none;
+.rv-by {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
 }
-.onb-input {
+.rv-empty {
+  justify-content: center;
   text-align: left;
-  padding: 14px 16px;
-  border-radius: 14px;
-  font-size: 1rem;
 }
-/* Fortschritts-Punkte */
+
+/* Reel-Navigations-Punkte */
 .onb-dots {
   display: flex;
-  gap: 8px;
-  margin: 18px 0 20px;
+  gap: 7px;
+  margin: 22px 0 16px;
 }
-.onb-dot {
+.onb-dot-nav {
   width: 7px;
   height: 7px;
   border-radius: 50%;
   background: var(--line-2);
   transition: width 0.3s var(--spring), background 0.3s var(--ease);
 }
-.onb-dot.on {
+.onb-dot-nav.on {
   width: 22px;
   border-radius: 4px;
   background: var(--accent);
 }
+
 .onb-actions {
-  width: 100%;
-  max-width: 320px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 .onb-primary {
   width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: var(--accent);
   color: var(--accent-ink);
   border: none;
@@ -790,7 +893,7 @@ code {
   transform: translateY(-2px);
 }
 .onb-primary:active:not(:disabled) {
-  transform: scale(0.97);
+  transform: scale(0.98);
 }
 .onb-back {
   width: 100%;
@@ -798,7 +901,7 @@ code {
   border: none;
   color: var(--muted);
   font-weight: 600;
-  padding: 10px;
+  padding: 9px;
 }
 .onb-back:hover:not(:disabled) {
   background: transparent;
