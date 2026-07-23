@@ -37,6 +37,15 @@ export const fonts = {
   bodyBold: 'Figtree_700Bold',
 };
 
+/** Freundliche, deterministische Identitätsfarbe je Seed (Titel/Handle) — bringt
+ *  spielerisch Farbe in die Karten, ohne die ruhige Basis zu stören. */
+const AVATAR_COLORS = ['#f2905e', '#5ec2a0', '#7aa2f7', '#e07a9b', '#d3a24a', '#9b86e6', '#5bbcd0', '#e0795e'];
+export function avatarColor(seed: string): string {
+  let n = 0;
+  for (let i = 0; i < seed.length; i++) n = (n * 31 + seed.charCodeAt(i)) >>> 0;
+  return AVATAR_COLORS[n % AVATAR_COLORS.length];
+}
+
 export type Tone = 'open' | 'done' | 'warn' | 'neutral';
 
 export function statusTone(status: string): Tone {

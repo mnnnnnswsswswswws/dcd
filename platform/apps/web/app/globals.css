@@ -24,11 +24,13 @@
   /* Rot nur fürs Herz/Gefahr. */
   --like: #f26d72;
   --danger: #f26d72;
-  --radius: 14px;
-  --radius-lg: 18px;
+  --radius: 16px;
+  --radius-lg: 22px;
   --tabbar-h: 66px;
   --font: "Figtree", system-ui, -apple-system, sans-serif;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Spielerische Feder mit leichtem Überschwingen — für Pop/Bounce-Interaktionen. */
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 *,
@@ -102,13 +104,13 @@ p {
   outline-offset: 2px;
 }
 
-/* Ruhiger Einstieg: ein dezenter Fade, kein gestaffeltes Spektakel. */
+/* Freundlicher Einstieg: ein leichter Aufwärts-Bounce. */
 main > * {
-  animation: fade 0.32s var(--ease) both;
+  animation: pop-in 0.4s var(--spring) both;
 }
-@keyframes fade {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(9px) scale(0.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .page {
@@ -164,13 +166,20 @@ main > * {
   height: 23px;
 }
 .tab .plus {
-  width: 44px;
+  width: 46px;
   height: 30px;
-  border-radius: 9px;
+  border-radius: 11px;
   background: var(--accent);
   display: grid;
   place-items: center;
   color: var(--accent-ink);
+  transition: transform 0.3s var(--spring);
+}
+.tab:hover .plus {
+  transform: translateY(-2px) scale(1.06) rotate(-3deg);
+}
+.tab:active .plus {
+  transform: scale(0.9);
 }
 .tab .plus svg {
   width: 21px;
@@ -210,17 +219,25 @@ main > * {
   inset: 0;
   background: linear-gradient(180deg, transparent 45%, rgba(12, 13, 16, 0.72) 100%);
 }
-/* Kategorie-Symbol: ruhig, mittig-oben, statisch (kein Schweben). */
+/* Kategorie-Symbol: freundlich groß, mit sanftem Auftauch-Pop und leichtem Wippen. */
 .feed-emoji {
   position: absolute;
-  top: 20%;
+  top: 19%;
   left: 0;
   right: 0;
   display: grid;
   place-items: center;
-  font-size: 4rem;
-  opacity: 0.9;
+  font-size: 4.2rem;
   z-index: 1;
+  animation: emoji-in 0.5s var(--spring) both, bob 4s ease-in-out 0.5s infinite;
+}
+@keyframes emoji-in {
+  from { opacity: 0; transform: scale(0.6) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes bob {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  50% { transform: translateY(-8px) rotate(3deg); }
 }
 .feed-content {
   position: relative;
@@ -276,17 +293,18 @@ main > * {
   background: var(--accent);
   color: var(--accent-ink);
   border: none;
-  border-radius: 12px;
+  border-radius: 14px;
   font-weight: 700;
   font-size: 0.94rem;
   padding: 13px 22px;
-  transition: background 0.18s var(--ease), transform 0.12s var(--ease);
+  transition: background 0.18s var(--ease), transform 0.25s var(--spring);
 }
 .feed-cta:hover {
   background: var(--accent-2);
+  transform: translateY(-2px);
 }
 .feed-cta:active {
-  transform: scale(0.98);
+  transform: scale(0.96);
 }
 
 /* Aktions-Leiste: klare Icons + echte Zähler, dezent. */
@@ -315,7 +333,7 @@ main > * {
   transition: transform 0.12s var(--ease);
 }
 .rail-btn:active {
-  transform: scale(0.92);
+  transform: scale(0.9);
 }
 .rail-btn svg {
   width: 25px;
@@ -324,13 +342,24 @@ main > * {
   box-sizing: content-box;
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.32);
-  transition: background 0.18s var(--ease), color 0.18s var(--ease);
+  transition: background 0.18s var(--ease), color 0.18s var(--ease), transform 0.3s var(--spring);
 }
 .rail-btn:hover svg {
   background: rgba(0, 0, 0, 0.5);
+  transform: translateY(-2px);
 }
 .rail-btn.on {
   color: var(--like);
+}
+/* Zufriedenstellender Feder-Pop beim Liken (tasteful, ohne Funken-Feuerwerk). */
+.rail-btn.on svg {
+  animation: like-pop 0.4s var(--spring);
+}
+@keyframes like-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.3); }
+  70% { transform: scale(0.9); }
+  100% { transform: scale(1); }
 }
 
 /* Status: schlicht, mit ruhigem Punkt (kein Puls). */
@@ -355,17 +384,17 @@ main > * {
 }
 
 .avatar-grad {
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: var(--surface-2);
-  border: 1px solid var(--line-2);
   display: grid;
   place-items: center;
-  color: var(--text);
+  color: #fff;
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: 1rem;
   flex: none;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.14);
 }
 
 /* ---------- Karten / Komponenten: schlicht, klar ---------- */
@@ -382,14 +411,15 @@ main > * {
 .card.tap {
   display: block;
   color: inherit;
-  transition: border-color 0.18s var(--ease), transform 0.12s var(--ease);
+  transition: border-color 0.18s var(--ease), transform 0.25s var(--spring);
 }
 .card.tap:hover {
   text-decoration: none;
   border-color: var(--line-2);
+  transform: translateY(-2px);
 }
 .card.tap:active {
-  transform: scale(0.995);
+  transform: scale(0.99);
 }
 .hero {
   background: var(--surface);
@@ -450,14 +480,15 @@ button {
   background: var(--surface-2);
   border: 1px solid var(--line-2);
   padding: 10px 16px;
-  border-radius: 10px;
-  transition: background 0.18s var(--ease), transform 0.12s var(--ease);
+  border-radius: 11px;
+  transition: background 0.18s var(--ease), transform 0.25s var(--spring);
 }
 button:hover:not(:disabled) {
   background: var(--surface);
+  transform: translateY(-1px);
 }
 button:active:not(:disabled) {
-  transform: scale(0.97);
+  transform: scale(0.96);
 }
 button.primary {
   background: var(--accent);
@@ -590,13 +621,13 @@ code {
   height: 36px;
   border-radius: 50%;
   background: var(--surface-2);
-  border: 1px solid var(--line-2);
   display: grid;
   place-items: center;
   font-size: 0.82rem;
   font-weight: 700;
-  color: var(--text);
+  color: #fff;
   flex: none;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.12);
 }
 
 /* ---------- Skeleton-Loading ---------- */

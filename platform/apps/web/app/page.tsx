@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   api,
+  avatarColor,
   categoryEmoji,
   euro,
   feedGradient,
@@ -167,7 +168,7 @@ export default function FeedPage() {
 
             <div className="feed-content">
               <div className="feed-creator">
-                <span className="avatar-grad">{initialOf(c)}</span>
+                <span className="avatar-grad" style={{ background: avatarColor(handleOf(c)) }}>{initialOf(c)}</span>
                 <span className="handle">{handleOf(c)}</span>
               </div>
               <h2 className="feed-title">{c.title || 'Ohne Titel'}</h2>

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { api, getToken, type CommentRow } from '../lib/api';
+import { api, avatarColor, getToken, type CommentRow } from '../lib/api';
 import { IconBookmark, IconComment, IconHeart } from './icons';
 
 /** Like-/Merken-Zeile mit echten Zählern (Backend). */
@@ -139,7 +139,7 @@ export function CommentsSection({ challengeId, onPosted }: { challengeId: string
       <div className="stack">
         {comments.map((c) => (
           <div key={c.id} className="sub" style={{ alignItems: 'flex-start' }}>
-            <span className="avatar">{c.author.charAt(0).toUpperCase()}</span>
+            <span className="avatar" style={{ background: avatarColor(c.author) }}>{c.author.charAt(0).toUpperCase()}</span>
             <div>
               <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>@{c.author}</div>
               <div>{c.body}</div>

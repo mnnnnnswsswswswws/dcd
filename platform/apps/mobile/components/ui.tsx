@@ -2,7 +2,6 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Animated,
-  Easing,
   Pressable,
   StyleSheet,
   Text,
@@ -26,12 +25,12 @@ export function FadeInUp({
 }) {
   const progress = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    Animated.timing(progress, {
+    Animated.spring(progress, {
       toValue: 1,
-      duration: 420,
       delay,
-      easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
+      speed: 12,
+      bounciness: 9,
     }).start();
   }, [progress, delay]);
   return (
@@ -40,7 +39,10 @@ export function FadeInUp({
         style,
         {
           opacity: progress,
-          transform: [{ translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [14, 0] }) }],
+          transform: [
+            { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) },
+            { scale: progress.interpolate({ inputRange: [0, 1], outputRange: [0.97, 1] }) },
+          ],
         },
       ]}
     >

@@ -4,7 +4,7 @@ import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native
 import { SessionBar } from '../components/SessionBar';
 import { Badge, Button, Card, ErrorText, Muted, Row, StatusBadge } from '../components/ui';
 import { api, euro, selectionModeLabel, type ChallengeSummary } from '../lib/api';
-import { colors, fonts } from '../lib/theme';
+import { avatarColor, colors, fonts } from '../lib/theme';
 
 export default function DiscoverScreen() {
   const router = useRouter();
@@ -58,8 +58,13 @@ export default function DiscoverScreen() {
 
       {open.map((c, i) => (
         <Card key={c.id} delay={Math.min(i, 5) * 70} onPress={() => router.push(`/challenge/${c.id}`)}>
-          <Row style={{ justifyContent: 'space-between' }}>
-            <Text style={styles.title}>{c.title || 'Ohne Titel'}</Text>
+          <Row style={{ justifyContent: 'space-between', flexWrap: 'nowrap' }}>
+            <Row style={{ flexShrink: 1, gap: 10 }}>
+              <View style={[styles.identity, { backgroundColor: avatarColor(c.title || c.id) }]}>
+                <Text style={styles.identityText}>{(c.title || '?').charAt(0).toUpperCase()}</Text>
+              </View>
+              <Text style={styles.title}>{c.title || 'Ohne Titel'}</Text>
+            </Row>
             <Text style={styles.prize}>{euro(c.prizeAmountCents)}</Text>
           </Row>
           <Row>
@@ -96,4 +101,13 @@ const styles = StyleSheet.create({
   h2: { fontSize: 19, fontFamily: fonts.heading, color: colors.text, marginVertical: 10 },
   title: { fontSize: 16, fontFamily: fonts.bodyBold, color: colors.text, flexShrink: 1 },
   prize: { fontSize: 17, fontFamily: fonts.heading, color: colors.gold, flexShrink: 0 },
+  identity: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  identityText: { fontSize: 15, fontFamily: fonts.bodyBold, color: '#fff' },
 });

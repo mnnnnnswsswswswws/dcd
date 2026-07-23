@@ -212,6 +212,25 @@ export function feedGradient(id: string): string {
   return `linear-gradient(180deg, hsl(${h} 20% 22%) 0%, hsl(${h} 16% 15%) 55%, #16171b 100%)`;
 }
 
+/** Freundliche, deterministische Identitätsfarbe je Nutzer/Handle — bringt spielerisch
+ *  Leben in Avatare und hilft nebenbei, Nutzer auseinanderzuhalten. Weiche Töne, damit
+ *  es bunt-freundlich bleibt, nicht grell. */
+const AVATAR_COLORS = [
+  '#f2905e', // Koralle
+  '#5ec2a0', // Mint
+  '#7aa2f7', // Himmelblau
+  '#e07a9b', // Rosé
+  '#d3a24a', // Bernstein
+  '#9b86e6', // Flieder
+  '#5bbcd0', // Türkis
+  '#e0795e', // Terracotta
+];
+export function avatarColor(seed: string): string {
+  let n = 0;
+  for (let i = 0; i < seed.length; i++) n = (n * 31 + seed.charCodeAt(i)) >>> 0;
+  return AVATAR_COLORS[n % AVATAR_COLORS.length];
+}
+
 export interface EvidenceIntent {
   evidenceRef: string;
   uploadUrl: string;
