@@ -48,6 +48,12 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      # Blockiert den Merge bei KRITISCHEN Dependency-Lücken. Nicht-kritische
+      # Restrisiken (Next-15-/Nest-11-Major-Upgrades) sind in docs/SECURITY.md
+      # dokumentiert und lassen die Pipeline bewusst nicht dauerhaft rot werden.
+      - name: Security audit (kritische Lücken blockieren)
+        run: pnpm audit --prod --audit-level critical
+
       - name: Prisma generate
         run: pnpm exec prisma generate
 
