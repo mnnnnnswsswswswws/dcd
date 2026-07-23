@@ -1,31 +1,28 @@
 import { Figtree_400Regular, Figtree_600SemiBold, Figtree_700Bold } from '@expo-google-fonts/figtree';
-import { Unbounded_700Bold } from '@expo-google-fonts/unbounded';
 import { useFonts } from 'expo-font';
 import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { EmberBackground } from '../components/ui';
+import { AppBackground } from '../components/ui';
 import { SessionProvider } from '../lib/session';
 import { colors, fonts } from '../lib/theme';
 
-/** Navigations-Theme: transparenter Screen-Hintergrund, damit der Ember-Schein hinter
- *  allen Screens durchscheint (react-navigation legt sonst helles Grau darueber). */
-const EmberTheme = {
+/** Navigations-Theme: ruhiges neutrales Dunkel als Screen-Grund. */
+const AppTheme = {
   ...DarkTheme,
   colors: {
     ...DarkTheme.colors,
-    background: 'transparent',
+    background: colors.bg,
     card: colors.bg,
     text: colors.text,
     primary: colors.accent,
-    border: 'rgba(255,255,255,0.1)',
+    border: colors.border,
   },
 };
 
 export default function RootLayout() {
   const [loaded] = useFonts({
-    Unbounded_700Bold,
     Figtree_400Regular,
     Figtree_600SemiBold,
     Figtree_700Bold,
@@ -41,11 +38,9 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <SessionProvider>
         <StatusBar style="light" />
-        {/* Ember-Schein liegt hinter allen Screens; die Screens selbst sind transparent,
-            damit der warme Schein durchscheint. */}
         <View style={{ flex: 1, backgroundColor: colors.bg }}>
-          <EmberBackground />
-          <ThemeProvider value={EmberTheme}>
+          <AppBackground />
+          <ThemeProvider value={AppTheme}>
             <Stack
               screenOptions={{
                 headerStyle: { backgroundColor: colors.bg },

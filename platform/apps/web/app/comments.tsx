@@ -56,7 +56,7 @@ export function SocialRow({
 
   return (
     <div className="row" style={{ gap: 14 }}>
-      <button className={`sm ghost${liked ? '' : ''}`} onClick={like} style={{ color: liked ? 'var(--ember-2)' : undefined }}>
+      <button className={`sm ghost${liked ? '' : ''}`} onClick={like} style={{ color: liked ? 'var(--like)' : undefined }}>
         <span style={{ width: 18, height: 18, display: 'inline-flex' }}>
           <IconHeart filled={liked} />
         </span>
@@ -68,7 +68,7 @@ export function SocialRow({
         </span>
         {commentCount}
       </span>
-      <button className="sm ghost" onClick={bookmark} style={{ color: saved ? 'var(--gold)' : undefined }}>
+      <button className="sm ghost" onClick={bookmark} style={{ color: saved ? 'var(--accent)' : undefined }}>
         <span style={{ width: 18, height: 18, display: 'inline-flex' }}>
           <IconBookmark filled={saved} />
         </span>

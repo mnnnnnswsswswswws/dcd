@@ -49,41 +49,10 @@ export function FadeInUp({
   );
 }
 
-/** Ember-Hintergrund: Feuerschein von unten + Vignette an den Rändern. Kein Blur,
- *  kein Aurora — warmes, cinematisches Material, das langsam „atmet". */
-export function EmberBackground() {
-  const glow = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(glow, { toValue: 1, duration: 5000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(glow, { toValue: 0, duration: 5000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-      ]),
-    ).start();
-  }, [glow]);
-
-  const opacity = glow.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1] });
-
-  return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      {/* Grundton */}
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.bg }]} />
-      {/* Feuerschein von unten (pulsiert dezent) */}
-      <Animated.View style={[StyleSheet.absoluteFill, { opacity }]}>
-        <LinearGradient
-          colors={['transparent', 'rgba(255,90,31,0.14)', 'rgba(255,138,43,0.22)']}
-          locations={[0.45, 0.82, 1]}
-          style={StyleSheet.absoluteFill}
-        />
-      </Animated.View>
-      {/* Cinematische Vignette (dunkle Ecken) */}
-      <LinearGradient
-        colors={['rgba(0,0,0,0.5)', 'transparent', 'transparent', 'rgba(0,0,0,0.55)']}
-        locations={[0, 0.22, 0.7, 1]}
-        style={StyleSheet.absoluteFill}
-      />
-    </View>
-  );
+/** Ruhiger, neutraler App-Hintergrund — ein einziger weicher Grundton. Kein Verlauf-
+ *  Drama, kein Schein: komfortabel und unaufdringlich. */
+export function AppBackground() {
+  return <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: colors.bg }]} />;
 }
 
 /** Matte Karte: warme Fläche + haarfeine Kante, gleitet beim Mount ein, federt beim Druck. */
@@ -201,15 +170,10 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: 20,
+    borderRadius: 18,
     padding: 16,
     marginBottom: 12,
     gap: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 8,
   },
   badge: {
     borderWidth: 1,
@@ -219,16 +183,14 @@ export const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   badgeText: {
-    fontSize: 11,
-    fontFamily: fonts.bodyBold,
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
+    fontSize: 12,
+    fontFamily: fonts.bodySemibold,
   },
   button: {
     borderWidth: 1,
     borderColor: colors.borderStrong,
     backgroundColor: colors.surface2,
-    borderRadius: 12,
+    borderRadius: 11,
     paddingVertical: 12,
     paddingHorizontal: 16,
     alignItems: 'center',
@@ -238,17 +200,10 @@ export const styles = StyleSheet.create({
   buttonPrimary: {
     borderWidth: 0,
     backgroundColor: 'transparent',
-    shadowColor: colors.ember,
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 10,
   },
   buttonText: {
-    fontFamily: fonts.heading,
-    fontSize: 14,
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
+    fontFamily: fonts.bodyBold,
+    fontSize: 14.5,
   },
   muted: { color: colors.muted, fontSize: 13, fontFamily: fonts.body },
   error: { color: colors.danger, fontSize: 14, fontFamily: fonts.body },
