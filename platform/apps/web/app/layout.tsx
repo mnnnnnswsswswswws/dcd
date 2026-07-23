@@ -2,6 +2,7 @@ import './globals.css';
 import type { ReactNode } from 'react';
 import { DemoBanner } from './demo-banner';
 import { BottomNav } from './bottom-nav';
+import { Onboarding } from './onboarding';
 
 export const metadata = {
   title: 'Video-Challenges',
@@ -24,6 +25,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <DemoBanner />
         <main>{children}</main>
         <BottomNav />
+        <Onboarding />
       </body>
     </html>
   );

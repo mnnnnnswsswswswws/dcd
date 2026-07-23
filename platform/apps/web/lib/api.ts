@@ -97,10 +97,19 @@ export async function api<T = unknown>(path: string, options: ApiOptions = {}): 
   return parsed as T;
 }
 
-/** Registriert einen volljährigen Nutzer und speichert die ID als Token. */
-export async function register(): Promise<string> {
+/** Registriert einen volljährigen Nutzer und speichert die ID als Token. Optional
+ *  wird direkt ein Nutzername gesetzt (für das Onboarding in einem Schritt). */
+export async function register(username?: string): Promise<string> {
   const user = await api<{ id: string }>('/v1/users', { method: 'POST', body: { isAdult: true }, auth: false });
   setToken(user.id);
+  const name = username?.trim();
+  if (name) {
+    try {
+      await api('/v1/users/me', { method: 'PATCH', body: { username: name } });
+    } catch {
+      /* Nutzername optional — Registrierung gilt trotzdem. */
+    }
+  }
   emitSession();
   return user.id;
 }
