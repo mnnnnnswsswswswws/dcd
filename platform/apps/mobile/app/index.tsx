@@ -42,6 +42,7 @@ export default function DiscoverScreen() {
           Tritt bezahlten Video-Challenges bei, nimm deinen Beweis in der App auf und gewinne das Preisgeld.
           Max. 10 Plätze pro Challenge.
         </Muted>
+        <Button title="▶  Live-Feed starten" variant="primary" onPress={() => router.push('/play')} />
       </View>
 
       <Row style={{ marginBottom: 8 }}>

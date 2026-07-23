@@ -76,6 +76,12 @@ export interface ChallengeSummary {
   maxSlots: number;
   submissionDeadline: string | null;
   createdAt: string;
+  // Optional angereichert von der Liste (Feed/Reveal): reale Live-Daten.
+  description?: string | null;
+  occupiedSlots?: number;
+  likeCount?: number;
+  commentCount?: number;
+  creator?: { username: string | null; displayName: string | null } | null;
 }
 
 export interface Criterion {
