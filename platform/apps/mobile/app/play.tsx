@@ -18,8 +18,8 @@ import { AnimatedPressable } from '../components/motion/AnimatedPressable';
 import { AnimatedCounter } from '../components/motion/AnimatedCounter';
 import { AnimatedBottomSheet } from '../components/motion/AnimatedBottomSheet';
 import { CountdownRing } from '../components/motion/CountdownRing';
-import { RecordingPulse } from '../components/motion/RecordingPulse';
 import { SuccessBurst } from '../components/motion/SuccessBurst';
+import { CameraStage } from '../components/motion/CameraStage';
 import { useDemo } from '../lib/demo/useDemo';
 import {
   cancelReservation,
@@ -116,6 +116,7 @@ function ChallengePage({ c, height, isActive, now }: { c: DemoChallenge; height:
   const last = free === 1;
   const few = free <= 3 && free > 1;
   const canJoin = c.status === 'open' && !submitted;
+  const isCam = phase === 'armed' || phase === 'recording'; // echte Kamera randlos
 
   // Karten-Fokus (Feedback, welche Karte „dran" ist).
   const enter = useRef(new Animated.Value(isActive ? 1 : 0.94)).current;
@@ -261,34 +262,46 @@ function ChallengePage({ c, height, isActive, now }: { c: DemoChallenge; height:
         <Animated.View
           style={[
             StyleSheet.absoluteFill,
-            styles.overlay,
+            isCam ? styles.overlayCam : styles.overlay,
             { opacity: overlay, transform: [{ scale: overlay.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1] }) }] },
           ]}
         >
-          <ParticipationFlow
-            phase={phase}
-            c={c}
-            recSec={recSec}
-            errMsg={errMsg}
-            remaining={remaining}
-            upload={s.upload}
-            onArm={() => setPhase('armed')}
-            onStartCam={() => setPhase('countdown')}
-            onCountdownDone={startRecording}
-            onStop={stopRecording}
-            onReRecord={() => setPhase('armed')}
-            onSubmitClip={submitFromPreview}
-            onPause={pauseUpload}
-            onResume={resumeUpload}
-            onRetry={retryUpload}
-            onCancelUpload={() => {
-              cancelUpload();
-              setPhase('reserved');
-            }}
-            onDone={() => setPhase('idle')}
-            onCancel={() => setPhase('idle')}
-            onErrorBack={() => setPhase('idle')}
-          />
+          {isCam ? (
+            <CameraStage
+              mode={phase === 'recording' ? 'recording' : 'prepare'}
+              c={c}
+              recSec={recSec}
+              recLimit={REC_LIMIT}
+              onStartCam={() => setPhase('countdown')}
+              onStop={stopRecording}
+              onCancel={() => setPhase('reserved')}
+            />
+          ) : (
+            <ParticipationFlow
+              phase={phase}
+              c={c}
+              recSec={recSec}
+              errMsg={errMsg}
+              remaining={remaining}
+              upload={s.upload}
+              onArm={() => setPhase('armed')}
+              onStartCam={() => setPhase('countdown')}
+              onCountdownDone={startRecording}
+              onStop={stopRecording}
+              onReRecord={() => setPhase('armed')}
+              onSubmitClip={submitFromPreview}
+              onPause={pauseUpload}
+              onResume={resumeUpload}
+              onRetry={retryUpload}
+              onCancelUpload={() => {
+                cancelUpload();
+                setPhase('reserved');
+              }}
+              onDone={() => setPhase('idle')}
+              onCancel={() => setPhase('idle')}
+              onErrorBack={() => setPhase('idle')}
+            />
+          )}
         </Animated.View>
       )}
     </View>
@@ -516,54 +529,7 @@ function ParticipationFlow({
         </View>
       )}
 
-      {/* Kamera-Vorbereitung: Ziel, Zeitlimit, Beweis-Overlay, Status — bewusster Moduswechsel */}
-      {phase === 'armed' && (
-        <View style={styles.camPrep}>
-          <View style={styles.proofOverlay}>
-            <Text style={styles.proofTxt}>BEWEIS · {c.id.toUpperCase()}</Text>
-          </View>
-          <Text style={styles.camGoalLabel}>Deine Aufgabe</Text>
-          <Text style={styles.camGoal}>{c.title}</Text>
-          <View style={styles.camMeta}>
-            <View style={styles.camMetaItem}>
-              <Text style={styles.camMetaN}>max {REC_LIMIT}s</Text>
-              <Text style={styles.camMetaL}>Zeitlimit</Text>
-            </View>
-            <View style={styles.camMetaItem}>
-              <Text style={[styles.camMetaN, { color: colors.accent }]}>● bereit</Text>
-              <Text style={styles.camMetaL}>Kamera &amp; Mikro</Text>
-            </View>
-          </View>
-          <AnimatedPressable onPress={onStartCam} haptic="medium" style={styles.recStart} label="Aufnahme starten">
-            <View style={styles.recStartRing}>
-              <View style={styles.recStartDot} />
-            </View>
-          </AnimatedPressable>
-          <Text style={styles.flowHint}>Tippen zum Starten — 3-2-1-Countdown</Text>
-          <AnimatedPressable onPress={onCancel} haptic="none" style={styles.flowGhost}>
-            <Text style={styles.flowGhostTxt}>Abbrechen</Text>
-          </AnimatedPressable>
-        </View>
-      )}
-
       {phase === 'countdown' && <CountdownRing from={3} onDone={onCountdownDone} />}
-
-      {phase === 'recording' && (
-        <View style={styles.center}>
-          <View style={styles.proofOverlay}>
-            <Text style={styles.proofTxt}>BEWEIS · {c.id.toUpperCase()}</Text>
-          </View>
-          <RecordingPulse seconds={recSec} />
-          <Text style={[styles.camLimit, recSec >= REC_LIMIT - 5 && { color: '#f2b06d' }]}>
-            {recSec} / {REC_LIMIT}s
-          </Text>
-          <Text style={styles.flowHint}>Nimm deinen Beweis auf — direkt in der App.</Text>
-          <AnimatedPressable onPress={onStop} haptic="medium" style={styles.stopBtn} label="Stoppen">
-            <View style={styles.stopInner} />
-            <Text style={styles.stopTxt}>Stoppen</Text>
-          </AnimatedPressable>
-        </View>
-      )}
 
       {/* Vorschau: Clip prüfen, erneut aufnehmen oder einsenden */}
       {phase === 'preview' && (
@@ -889,6 +855,8 @@ const styles = StyleSheet.create({
   primaryMuted: { backgroundColor: colors.surface2 },
 
   overlay: { backgroundColor: 'rgba(12,13,16,0.95)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  overlayCam: { backgroundColor: colors.bg },
+  camFill: { flex: 1, width: '100%' },
   flowCard: { width: '100%', maxWidth: 380, alignItems: 'center' },
   center: { alignItems: 'center', gap: 14, width: '100%' },
   flowLabel: { fontFamily: fonts.bodySemibold, fontSize: 15, color: colors.muted },
