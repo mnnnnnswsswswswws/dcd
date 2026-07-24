@@ -50,12 +50,14 @@ export interface Submission {
   challengeId: string;
   status: 'processing' | 'accepted' | 'rejected';
   at: number;
+  videoUri?: string; // echter, in der App aufgenommener Clip (falls das Gerät recordAsync unterstützt)
 }
 export interface UploadState {
   challengeId: string;
   progress: number; // 0..1
   status: UploadStatus;
   retries: number;
+  videoUri?: string; // wird zur Einsendung durchgereicht
 }
 export interface DemoEvent {
   type: string;
@@ -283,9 +285,9 @@ function stopUploadTimer() {
 /** Zentral gesteuerter Upload (im Store, nicht in der Komponente). Unterstützt
  *  Pause/Resume/Abbruch/Fehler. Szenario C: verliert bei ~50 % die Verbindung und
  *  nimmt automatisch wieder auf. */
-export function startUpload(challengeId: string) {
+export function startUpload(challengeId: string, videoUri?: string) {
   stopUploadTimer();
-  state.upload = { challengeId, progress: 0, status: 'QUEUED', retries: 0 };
+  state.upload = { challengeId, progress: 0, status: 'QUEUED', retries: 0, videoUri };
   log('upload_started', challengeId);
   emit();
   runUpload();
@@ -365,7 +367,8 @@ export function cancelUpload() {
 function finishSubmission(challengeId: string) {
   // Einsendung akzeptiert → Reservierung wird zur Einsendung, Profil bekommt Eintrag,
   // Karte im Feed wechselt sichtbar den Status.
-  state.submissions = [{ challengeId, status: 'accepted', at: Date.now() }, ...state.submissions.filter((s) => s.challengeId !== challengeId)];
+  const videoUri = state.upload?.challengeId === challengeId ? state.upload.videoUri : undefined;
+  state.submissions = [{ challengeId, status: 'accepted', at: Date.now(), videoUri }, ...state.submissions.filter((s) => s.challengeId !== challengeId)];
   if (state.reservation?.challengeId === challengeId) state.reservation = null;
   const ch = state.challenges.find((x) => x.id === challengeId);
   if (ch) ch.status = ch.occupiedSlots >= ch.maxSlots ? 'full' : ch.status;
@@ -380,4 +383,7 @@ export function hasSubmitted(challengeId: string): boolean {
 }
 export function isSaved(challengeId: string): boolean {
   return Boolean(state.saved[challengeId]);
+}
+export function challengeById(id: string): DemoChallenge | undefined {
+  return state.challenges.find((x) => x.id === id);
 }

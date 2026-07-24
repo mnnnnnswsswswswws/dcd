@@ -108,6 +108,7 @@ function ChallengePage({ c, height, isActive, now }: { c: DemoChallenge; height:
   const [phase, setPhase] = useState<Phase>('idle');
   const [recSec, setRecSec] = useState(0);
   const [errMsg, setErrMsg] = useState('');
+  const capturedUri = useRef<string | null>(null); // echter, aufgenommener Clip (falls verfügbar)
 
   const saved = Boolean(s.saved[c.id]);
   const reservedHere = s.reservation?.challengeId === c.id;
@@ -116,7 +117,7 @@ function ChallengePage({ c, height, isActive, now }: { c: DemoChallenge; height:
   const last = free === 1;
   const few = free <= 3 && free > 1;
   const canJoin = c.status === 'open' && !submitted;
-  const isCam = phase === 'armed' || phase === 'recording'; // echte Kamera randlos
+  const isCam = phase === 'armed' || phase === 'countdown' || phase === 'recording'; // echte Kamera randlos (auch während des Countdowns warm halten)
 
   // Karten-Fokus (Feedback, welche Karte „dran" ist).
   const enter = useRef(new Animated.Value(isActive ? 1 : 0.94)).current;
@@ -167,6 +168,7 @@ function ChallengePage({ c, height, isActive, now }: { c: DemoChallenge; height:
   }
   function startRecording() {
     setRecSec(0);
+    capturedUri.current = null; // neuer Take → alten Clip verwerfen
     setPhase('recording'); // die an 'recording' gekoppelten Effects starten die Uhr
     haptics.medium();
   }
@@ -175,7 +177,7 @@ function ChallengePage({ c, height, isActive, now }: { c: DemoChallenge; height:
     setPhase('preview'); // erst Vorschau, dann bewusst einsenden
   }
   function submitFromPreview() {
-    startUpload(c.id);
+    startUpload(c.id, capturedUri.current ?? undefined); // echten Clip mit der Einsendung verknüpfen
     setPhase('uploading');
   }
 
@@ -268,13 +270,17 @@ function ChallengePage({ c, height, isActive, now }: { c: DemoChallenge; height:
         >
           {isCam ? (
             <CameraStage
-              mode={phase === 'recording' ? 'recording' : 'prepare'}
+              mode={phase === 'recording' ? 'recording' : phase === 'countdown' ? 'countdown' : 'prepare'}
               c={c}
               recSec={recSec}
               recLimit={REC_LIMIT}
               onStartCam={() => setPhase('countdown')}
+              onCountdownDone={startRecording}
               onStop={stopRecording}
               onCancel={() => setPhase('reserved')}
+              onCaptured={(uri) => {
+                capturedUri.current = uri;
+              }}
             />
           ) : (
             <ParticipationFlow

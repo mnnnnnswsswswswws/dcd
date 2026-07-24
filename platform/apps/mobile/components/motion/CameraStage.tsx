@@ -1,16 +1,22 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { CameraView, useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
 import { colors, fonts } from '../../lib/theme';
 import { haptics } from '../../lib/haptics';
 import { AnimatedPressable } from './AnimatedPressable';
 import { RecordingPulse } from './RecordingPulse';
+import { CountdownRing } from './CountdownRing';
 
 /**
- * Echte Kamera-Bühne: zeigt die Live-Gerätekamera als Hintergrund der Vorbereitungs-
- * und Aufnahme-Phase. Behandelt echte Berechtigungen (angefragt erst NACH erklärtem
- * Nutzen im Vorbereitungs-Screen) und den „verweigert/nicht verfügbar"-Zustand als
- * eigenen Fehlerzustand mit Wiederherstellung. Kein Galerie-Import — bewusst.
+ * Echte Kamera-Bühne: zeigt die Live-Gerätekamera als Hintergrund der Vorbereitungs-,
+ * Countdown- und Aufnahme-Phase. Behandelt echte Berechtigungen (angefragt erst NACH
+ * erklärtem Nutzen im Vorbereitungs-Screen) und den „verweigert/nicht verfügbar"-Zustand
+ * als eigenen Fehlerzustand mit Wiederherstellung. Kein Galerie-Import — bewusst.
+ *
+ * Aufnahme ist ECHT: `recordAsync()` schreibt einen Clip in den Cache; die resultierende
+ * URI wird über `onCaptured` nach oben gereicht (und mit der Einsendung verknüpft). Auf
+ * Plattformen ohne Videoaufnahme (z. B. Web-Export) degradiert das sauber — `onCaptured`
+ * liefert dann `null` und der Flow läuft ohne echten Clip weiter.
  */
 export function CameraStage({
   mode,
@@ -18,19 +24,52 @@ export function CameraStage({
   recSec,
   recLimit,
   onStartCam,
+  onCountdownDone,
   onStop,
   onCancel,
+  onCaptured,
 }: {
-  mode: 'prepare' | 'recording';
+  mode: 'prepare' | 'countdown' | 'recording';
   c: { id: string; title: string };
   recSec: number;
   recLimit: number;
   onStartCam: () => void;
+  onCountdownDone: () => void;
   onStop: () => void;
   onCancel: () => void;
+  onCaptured?: (uri: string | null) => void;
 }) {
   const [cam, reqCam] = useCameraPermissions();
   const [mic, reqMic] = useMicrophonePermissions();
+  const camRef = useRef<CameraView>(null);
+  const [camReady, setCamReady] = useState(false);
+
+  // Echte Aufnahme: startet, sobald wir im Aufnahmemodus sind UND die Kamera bereit ist.
+  // Der recordAsync-Promise löst auf, wenn stopRecording() gerufen wird, das Zeitlimit
+  // erreicht ist oder die Vorschau endet (Unmount) — in allen Fällen liefern wir die URI.
+  useEffect(() => {
+    if (mode !== 'recording' || !camReady) return;
+    const camera = camRef.current;
+    if (!camera) return;
+    let done = false;
+    const finish = (uri: string | null) => {
+      if (done) return;
+      done = true;
+      onCaptured?.(uri);
+    };
+    camera
+      .recordAsync({ maxDuration: recLimit })
+      .then((res) => finish(res?.uri ?? null))
+      .catch(() => finish(null));
+    return () => {
+      try {
+        camera.stopRecording();
+      } catch {
+        // Aufnahme evtl. bereits beendet — ignorieren.
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, camReady]);
 
   const loading = !cam || !mic;
   const denied = (cam && !cam.granted && !cam.canAskAgain) || (mic && !mic.granted && !mic.canAskAgain);
@@ -95,7 +134,13 @@ export function CameraStage({
   // ready → echte Live-Vorschau als Hintergrund + Steuerung darüber.
   return (
     <View style={StyleSheet.absoluteFill}>
-      <CameraView style={StyleSheet.absoluteFill} facing="front" mode="video" />
+      <CameraView
+        ref={camRef}
+        style={StyleSheet.absoluteFill}
+        facing="front"
+        mode="video"
+        onCameraReady={() => setCamReady(true)}
+      />
       <View style={styles.scrim} />
 
       {/* Beweis-Overlay — immer sichtbar, Nachweis der In-App-Herkunft */}
@@ -104,7 +149,11 @@ export function CameraStage({
         <Text style={styles.proofTxt}>BEWEIS · {c.id.toUpperCase()}</Text>
       </View>
 
-      {mode === 'prepare' ? (
+      {mode === 'countdown' ? (
+        <View style={styles.countdownWrap}>
+          <CountdownRing from={3} onDone={onCountdownDone} />
+        </View>
+      ) : mode === 'prepare' ? (
         <View style={styles.controls}>
           <Text style={styles.goalLabel}>Deine Aufgabe</Text>
           <Text style={styles.goal}>{c.title}</Text>
@@ -141,6 +190,7 @@ export function CameraStage({
 const REC = '#f2696e';
 const styles = StyleSheet.create({
   scrim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(10,11,13,0.35)' },
+  countdownWrap: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
   fallback: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28, gap: 12 },
   errBadge: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },
   errGlyph: { fontSize: 32 },

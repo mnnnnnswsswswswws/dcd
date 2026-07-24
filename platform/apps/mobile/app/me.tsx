@@ -1,10 +1,12 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Badge, Card, ErrorText, Muted, Row, StatusBadge } from '../components/ui';
 import { api, euro, selectionModeLabel, type ChallengeSummary, type MyChallenges } from '../lib/api';
 import { useSession } from '../lib/session';
 import { colors, fonts } from '../lib/theme';
+import { useDemo } from '../lib/demo/useDemo';
+import { challengeById, type Submission } from '../lib/demo/store';
 
 function List({ items, onOpen }: { items: (ChallengeSummary & { slotStatus?: string })[]; onOpen: (id: string) => void }) {
   if (items.length === 0) return <Muted>Keine.</Muted>;
@@ -24,6 +26,60 @@ function List({ items, onOpen }: { items: (ChallengeSummary & { slotStatus?: str
         </Card>
       ))}
     </>
+  );
+}
+
+function relTime(from: number, now: number): string {
+  const s = Math.max(0, Math.floor((now - from) / 1000));
+  if (s < 60) return 'gerade eben';
+  const m = Math.floor(s / 60);
+  if (m < 60) return `vor ${m} Min`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `vor ${h} Std`;
+  return `vor ${Math.floor(h / 24)} T`;
+}
+
+const subStatusLabel: Record<Submission['status'], string> = {
+  processing: 'In Prüfung',
+  accepted: 'Angenommen',
+  rejected: 'Abgelehnt',
+};
+const subStatusColor: Record<Submission['status'], string> = {
+  processing: colors.muted,
+  accepted: colors.accent,
+  rejected: '#f2696e',
+};
+
+/** Live aus dem zentralen Demo-Store: jede Einsendung, die im Play-Flow entsteht,
+ *  taucht hier sofort auf — inkl. Hinweis, ob ein echter In-App-Clip aufgenommen wurde. */
+function MySubmissions({ onOpen }: { onOpen: (id: string) => void }) {
+  const s = useDemo();
+  if (s.loading || s.submissions.length === 0) return null;
+  return (
+    <View style={{ marginBottom: 6 }}>
+      <Row style={{ justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <Text style={styles.h2}>Meine Einsendungen</Text>
+        <Text style={styles.count}>{s.submissions.length}</Text>
+      </Row>
+      {s.submissions.map((sub) => {
+        const ch = challengeById(sub.challengeId);
+        return (
+          <Card key={`${sub.challengeId}-${sub.at}`} onPress={() => onOpen(sub.challengeId)}>
+            <Row style={{ justifyContent: 'space-between' }}>
+              <Text style={styles.title}>{ch ? `${ch.emoji} ${ch.title}` : 'Challenge'}</Text>
+              {ch ? <Text style={styles.prize}>{euro(ch.prizeCents)}</Text> : null}
+            </Row>
+            <Row style={{ marginTop: 6, gap: 8, alignItems: 'center' }}>
+              <View style={[styles.dot, { backgroundColor: subStatusColor[sub.status] }]} />
+              <Text style={[styles.subStatus, { color: subStatusColor[sub.status] }]}>{subStatusLabel[sub.status]}</Text>
+              <Text style={styles.meta}>· {relTime(sub.at, s.now)}</Text>
+              <View style={{ flex: 1 }} />
+              <Text style={styles.clip}>{sub.videoUri ? '● In-App-Clip' : '○ Beweis'}</Text>
+            </Row>
+          </Card>
+        );
+      })}
+    </View>
   );
 }
 
@@ -61,7 +117,8 @@ export default function MeScreen() {
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}
     >
-      {!token && <Muted>Bitte auf der Startseite registrieren/anmelden.</Muted>}
+      <MySubmissions onOpen={(cid) => router.push(`/challenge/${cid}`)} />
+      {!token && <Muted>Melde dich an, um erstellte und beigetretene Challenges zu sehen.</Muted>}
       {error && <ErrorText>Fehler: {error}</ErrorText>}
       {data && (
         <>
@@ -80,4 +137,9 @@ const styles = StyleSheet.create({
   h2: { fontSize: 19, fontFamily: fonts.heading, color: colors.text, marginVertical: 10 },
   title: { fontSize: 16, fontFamily: fonts.bodyBold, color: colors.text, flexShrink: 1 },
   prize: { fontSize: 17, fontFamily: fonts.heading, color: colors.gold },
+  count: { fontSize: 13, fontFamily: fonts.bodySemibold, color: colors.accent },
+  dot: { width: 8, height: 8, borderRadius: 4 },
+  subStatus: { fontSize: 13, fontFamily: fonts.bodyBold },
+  meta: { fontSize: 13, fontFamily: fonts.body, color: colors.muted },
+  clip: { fontSize: 12, fontFamily: fonts.bodySemibold, color: colors.muted },
 });
