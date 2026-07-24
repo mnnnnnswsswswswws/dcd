@@ -20,6 +20,7 @@ import { AnimatedBottomSheet } from '../components/motion/AnimatedBottomSheet';
 import { CountdownRing } from '../components/motion/CountdownRing';
 import { SuccessBurst } from '../components/motion/SuccessBurst';
 import { CameraStage } from '../components/motion/CameraStage';
+import { ClipPreview } from '../components/motion/ClipPreview';
 import { useDemo } from '../lib/demo/useDemo';
 import {
   cancelReservation,
@@ -109,6 +110,7 @@ function ChallengePage({ c, height, isActive, now }: { c: DemoChallenge; height:
   const [recSec, setRecSec] = useState(0);
   const [errMsg, setErrMsg] = useState('');
   const capturedUri = useRef<string | null>(null); // echter, aufgenommener Clip (falls verfügbar)
+  const [clipUri, setClipUri] = useState<string | null>(null); // gespiegelt für die Vorschau
 
   const saved = Boolean(s.saved[c.id]);
   const reservedHere = s.reservation?.challengeId === c.id;
@@ -169,6 +171,7 @@ function ChallengePage({ c, height, isActive, now }: { c: DemoChallenge; height:
   function startRecording() {
     setRecSec(0);
     capturedUri.current = null; // neuer Take → alten Clip verwerfen
+    setClipUri(null);
     setPhase('recording'); // die an 'recording' gekoppelten Effects starten die Uhr
     haptics.medium();
   }
@@ -280,6 +283,7 @@ function ChallengePage({ c, height, isActive, now }: { c: DemoChallenge; height:
               onCancel={() => setPhase('reserved')}
               onCaptured={(uri) => {
                 capturedUri.current = uri;
+                setClipUri(uri);
               }}
             />
           ) : (
@@ -290,6 +294,7 @@ function ChallengePage({ c, height, isActive, now }: { c: DemoChallenge; height:
               errMsg={errMsg}
               remaining={remaining}
               upload={s.upload}
+              clipUri={clipUri}
               onArm={() => setPhase('armed')}
               onStartCam={() => setPhase('countdown')}
               onCountdownDone={startRecording}
@@ -466,6 +471,7 @@ function ParticipationFlow({
   errMsg,
   remaining,
   upload,
+  clipUri,
   onArm,
   onStartCam,
   onCountdownDone,
@@ -486,6 +492,7 @@ function ParticipationFlow({
   errMsg: string;
   remaining: number;
   upload: ReturnType<typeof useDemo>['upload'];
+  clipUri: string | null;
   onArm: () => void;
   onStartCam: () => void;
   onCountdownDone: () => void;
@@ -540,14 +547,20 @@ function ParticipationFlow({
       {/* Vorschau: Clip prüfen, erneut aufnehmen oder einsenden */}
       {phase === 'preview' && (
         <View style={styles.center}>
-          <View style={styles.previewFrame}>
-            <Text style={styles.previewPlay}>▶</Text>
-            <View style={styles.previewBadge}>
-              <Text style={styles.previewBadgeTxt}>{recSec > 0 ? `${recSec}s` : 'Clip'}</Text>
+          {clipUri ? (
+            <ClipPreview uri={clipUri} seconds={recSec} />
+          ) : (
+            <View style={styles.previewFrame}>
+              <Text style={styles.previewPlay}>▶</Text>
+              <View style={styles.previewBadge}>
+                <Text style={styles.previewBadgeTxt}>{recSec > 0 ? `${recSec}s` : 'Clip'}</Text>
+              </View>
             </View>
-          </View>
+          )}
           <Text style={styles.flowTitle}>Sieht gut aus?</Text>
-          <Text style={styles.flowHint}>Prüf deinen Clip — du kannst neu aufnehmen oder direkt einsenden.</Text>
+          <Text style={styles.flowHint}>
+            {clipUri ? 'Das ist dein Take — du kannst neu aufnehmen oder direkt einsenden.' : 'Prüf deinen Clip — du kannst neu aufnehmen oder direkt einsenden.'}
+          </Text>
           <AnimatedPressable onPress={onSubmitClip} haptic="medium" style={styles.flowPrimary} label="Einsenden">
             <Text style={styles.flowPrimaryTxt}>Einsenden</Text>
           </AnimatedPressable>
