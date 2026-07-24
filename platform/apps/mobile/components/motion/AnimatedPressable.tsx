@@ -14,6 +14,7 @@ export function AnimatedPressable({
   pressScale = scale.press,
   style,
   hitSlop = 6,
+  label,
 }: {
   children: ReactNode;
   onPress?: () => void;
@@ -23,6 +24,7 @@ export function AnimatedPressable({
   pressScale?: number;
   style?: StyleProp<ViewStyle>;
   hitSlop?: number;
+  label?: string;
 }) {
   const s = useRef(new Animated.Value(1)).current;
 
@@ -30,6 +32,8 @@ export function AnimatedPressable({
     <Pressable
       disabled={disabled}
       hitSlop={hitSlop}
+      accessibilityRole="button"
+      accessibilityLabel={label}
       onPressIn={() => springTo(s, pressScale, springs.press).start()}
       onPressOut={() => springTo(s, 1, springs.press).start()}
       onPress={() => {

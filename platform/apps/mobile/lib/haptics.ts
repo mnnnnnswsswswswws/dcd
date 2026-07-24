@@ -22,6 +22,8 @@ export const haptics = {
   medium: () => safe(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)),
   /** Einsendung erfolgreich, Gewinn. */
   success: () => safe(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)),
+  /** Warnung: Reservierung/Zeit läuft ab, Aufnahme unterbrochen. */
+  warning: () => safe(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)),
   /** Fehler. */
   error: () => safe(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)),
 };

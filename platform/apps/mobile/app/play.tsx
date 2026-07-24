@@ -87,7 +87,19 @@ export default function PlayScreen() {
 const HEAD = 44;
 
 /* ------------------------------------------------------------------ */
-type Phase = 'idle' | 'reserving' | 'reserved' | 'error' | 'countdown' | 'recording' | 'uploading' | 'done';
+type Phase =
+  | 'idle'
+  | 'reserving'
+  | 'reserved'
+  | 'error'
+  | 'armed' // Kamera vorbereitet (Ziel, Zeitlimit, Status)
+  | 'countdown'
+  | 'recording'
+  | 'preview' // aufgenommener Clip: erneut / einsenden
+  | 'uploading'
+  | 'done';
+
+const REC_LIMIT = 30; // sichtbares Zeitlimit (Sek)
 
 function ChallengePage({ c, height, isActive, now }: { c: DemoChallenge; height: number; isActive: boolean; now: number }) {
   const s = useDemo();
@@ -124,13 +136,19 @@ function ChallengePage({ c, height, isActive, now }: { c: DemoChallenge; height:
     if (s.upload?.status === 'ACCEPTED') setPhase('done');
   }, [s.upload?.status, phase]);
 
-  const recTimer = useRef<ReturnType<typeof setInterval> | null>(null);
-  useEffect(
-    () => () => {
-      if (recTimer.current) clearInterval(recTimer.current);
-    },
-    [],
-  );
+  // Aufnahme-Uhr sauber an die Phase gekoppelt: läuft nur in 'recording', Cleanup
+  // stoppt den Timer beim Phasenwechsel (kein verwaister Interval).
+  useEffect(() => {
+    if (phase !== 'recording') return;
+    const id = setInterval(() => setRecSec((x) => x + 1), 1000);
+    return () => clearInterval(id);
+  }, [phase]);
+  useEffect(() => {
+    if (phase === 'recording' && recSec >= REC_LIMIT) {
+      haptics.warning();
+      setPhase('preview');
+    }
+  }, [phase, recSec]);
 
   function onReserve() {
     setPhase('reserving');
@@ -148,13 +166,14 @@ function ChallengePage({ c, height, isActive, now }: { c: DemoChallenge; height:
   }
   function startRecording() {
     setRecSec(0);
-    setPhase('recording');
+    setPhase('recording'); // die an 'recording' gekoppelten Effects starten die Uhr
     haptics.medium();
-    recTimer.current = setInterval(() => setRecSec((x) => x + 1), 1000);
   }
   function stopRecording() {
-    if (recTimer.current) clearInterval(recTimer.current);
     haptics.medium();
+    setPhase('preview'); // erst Vorschau, dann bewusst einsenden
+  }
+  function submitFromPreview() {
     startUpload(c.id);
     setPhase('uploading');
   }
@@ -253,9 +272,12 @@ function ChallengePage({ c, height, isActive, now }: { c: DemoChallenge; height:
             errMsg={errMsg}
             remaining={remaining}
             upload={s.upload}
-            onArm={() => setPhase('countdown')}
+            onArm={() => setPhase('armed')}
+            onStartCam={() => setPhase('countdown')}
             onCountdownDone={startRecording}
             onStop={stopRecording}
+            onReRecord={() => setPhase('armed')}
+            onSubmitClip={submitFromPreview}
             onPause={pauseUpload}
             onResume={resumeUpload}
             onRetry={retryUpload}
@@ -426,8 +448,11 @@ function ParticipationFlow({
   remaining,
   upload,
   onArm,
+  onStartCam,
   onCountdownDone,
   onStop,
+  onReRecord,
+  onSubmitClip,
   onPause,
   onResume,
   onRetry,
@@ -443,8 +468,11 @@ function ParticipationFlow({
   remaining: number;
   upload: ReturnType<typeof useDemo>['upload'];
   onArm: () => void;
+  onStartCam: () => void;
   onCountdownDone: () => void;
   onStop: () => void;
+  onReRecord: () => void;
+  onSubmitClip: () => void;
   onPause: () => void;
   onResume: () => void;
   onRetry: () => void;
@@ -479,11 +507,41 @@ function ParticipationFlow({
       {phase === 'reserved' && (
         <View style={styles.center}>
           <SuccessBurst title="Du bist drin." subtitle={`Platz ${place} von ${c.maxSlots} · reserviert ${fmt(remaining)}`} />
-          <AnimatedPressable onPress={onArm} haptic="medium" style={styles.flowPrimary}>
-            <Text style={styles.flowPrimaryTxt}>Jetzt aufnehmen</Text>
+          <AnimatedPressable onPress={onArm} haptic="medium" style={styles.flowPrimary} label="Kamera öffnen">
+            <Text style={styles.flowPrimaryTxt}>Kamera öffnen</Text>
           </AnimatedPressable>
           <AnimatedPressable onPress={onCancel} haptic="none" style={styles.flowGhost}>
             <Text style={styles.flowGhostTxt}>Später — Platz bleibt reserviert</Text>
+          </AnimatedPressable>
+        </View>
+      )}
+
+      {/* Kamera-Vorbereitung: Ziel, Zeitlimit, Beweis-Overlay, Status — bewusster Moduswechsel */}
+      {phase === 'armed' && (
+        <View style={styles.camPrep}>
+          <View style={styles.proofOverlay}>
+            <Text style={styles.proofTxt}>BEWEIS · {c.id.toUpperCase()}</Text>
+          </View>
+          <Text style={styles.camGoalLabel}>Deine Aufgabe</Text>
+          <Text style={styles.camGoal}>{c.title}</Text>
+          <View style={styles.camMeta}>
+            <View style={styles.camMetaItem}>
+              <Text style={styles.camMetaN}>max {REC_LIMIT}s</Text>
+              <Text style={styles.camMetaL}>Zeitlimit</Text>
+            </View>
+            <View style={styles.camMetaItem}>
+              <Text style={[styles.camMetaN, { color: colors.accent }]}>● bereit</Text>
+              <Text style={styles.camMetaL}>Kamera &amp; Mikro</Text>
+            </View>
+          </View>
+          <AnimatedPressable onPress={onStartCam} haptic="medium" style={styles.recStart} label="Aufnahme starten">
+            <View style={styles.recStartRing}>
+              <View style={styles.recStartDot} />
+            </View>
+          </AnimatedPressable>
+          <Text style={styles.flowHint}>Tippen zum Starten — 3-2-1-Countdown</Text>
+          <AnimatedPressable onPress={onCancel} haptic="none" style={styles.flowGhost}>
+            <Text style={styles.flowGhostTxt}>Abbrechen</Text>
           </AnimatedPressable>
         </View>
       )}
@@ -496,10 +554,33 @@ function ParticipationFlow({
             <Text style={styles.proofTxt}>BEWEIS · {c.id.toUpperCase()}</Text>
           </View>
           <RecordingPulse seconds={recSec} />
+          <Text style={[styles.camLimit, recSec >= REC_LIMIT - 5 && { color: '#f2b06d' }]}>
+            {recSec} / {REC_LIMIT}s
+          </Text>
           <Text style={styles.flowHint}>Nimm deinen Beweis auf — direkt in der App.</Text>
-          <AnimatedPressable onPress={onStop} haptic="medium" style={styles.stopBtn}>
+          <AnimatedPressable onPress={onStop} haptic="medium" style={styles.stopBtn} label="Stoppen">
             <View style={styles.stopInner} />
-            <Text style={styles.stopTxt}>Stoppen &amp; einsenden</Text>
+            <Text style={styles.stopTxt}>Stoppen</Text>
+          </AnimatedPressable>
+        </View>
+      )}
+
+      {/* Vorschau: Clip prüfen, erneut aufnehmen oder einsenden */}
+      {phase === 'preview' && (
+        <View style={styles.center}>
+          <View style={styles.previewFrame}>
+            <Text style={styles.previewPlay}>▶</Text>
+            <View style={styles.previewBadge}>
+              <Text style={styles.previewBadgeTxt}>{recSec > 0 ? `${recSec}s` : 'Clip'}</Text>
+            </View>
+          </View>
+          <Text style={styles.flowTitle}>Sieht gut aus?</Text>
+          <Text style={styles.flowHint}>Prüf deinen Clip — du kannst neu aufnehmen oder direkt einsenden.</Text>
+          <AnimatedPressable onPress={onSubmitClip} haptic="medium" style={styles.flowPrimary} label="Einsenden">
+            <Text style={styles.flowPrimaryTxt}>Einsenden</Text>
+          </AnimatedPressable>
+          <AnimatedPressable onPress={onReRecord} haptic="light" style={styles.flowGhost} label="Erneut aufnehmen">
+            <Text style={styles.flowGhostTxt}>Erneut aufnehmen</Text>
           </AnimatedPressable>
         </View>
       )}
@@ -553,7 +634,7 @@ function ParticipationFlow({
       {phase === 'done' && (
         <View style={styles.center}>
           <SuccessBurst title="Eingereicht." subtitle="Und jetzt? Daumen drücken — die Community entscheidet." />
-          <AnimatedPressable onPress={onDone} haptic="selection" style={styles.flowPrimary}>
+          <AnimatedPressable onPress={onDone} haptic="selection" style={styles.flowPrimary} label="Zurück zum Feed">
             <Text style={styles.flowPrimaryTxt}>Zurück zum Feed</Text>
           </AnimatedPressable>
         </View>
@@ -827,6 +908,23 @@ const styles = StyleSheet.create({
   stopBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(242,105,110,0.14)', borderWidth: 1, borderColor: 'rgba(242,105,110,0.55)', paddingVertical: 14, paddingHorizontal: 22, borderRadius: 13, marginTop: 6 },
   stopInner: { width: 16, height: 16, borderRadius: 4, backgroundColor: REC },
   stopTxt: { fontFamily: fonts.bodyBold, fontSize: 15, color: '#fff' },
+  camLimit: { fontFamily: fonts.heading, fontSize: 15, color: colors.muted, fontVariant: ['tabular-nums'] },
+
+  camPrep: { alignItems: 'center', gap: 12, width: '100%', paddingTop: 8 },
+  camGoalLabel: { fontFamily: fonts.bodySemibold, fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', color: colors.faint, marginTop: 8 },
+  camGoal: { fontFamily: fonts.heading, fontSize: 22, color: colors.text, textAlign: 'center', maxWidth: 300 },
+  camMeta: { flexDirection: 'row', gap: 28, marginVertical: 6 },
+  camMetaItem: { alignItems: 'center', gap: 2 },
+  camMetaN: { fontFamily: fonts.bodyBold, fontSize: 15, color: colors.text },
+  camMetaL: { fontFamily: fonts.body, fontSize: 12, color: colors.muted },
+  recStart: { marginTop: 8 },
+  recStartRing: { width: 78, height: 78, borderRadius: 39, borderWidth: 4, borderColor: 'rgba(255,255,255,0.4)', alignItems: 'center', justifyContent: 'center' },
+  recStartDot: { width: 56, height: 56, borderRadius: 28, backgroundColor: REC },
+
+  previewFrame: { width: 170, height: 240, borderRadius: 18, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.borderStrong, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  previewPlay: { fontSize: 40, color: 'rgba(255,255,255,0.7)' },
+  previewBadge: { position: 'absolute', bottom: 10, right: 10, backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  previewBadgeTxt: { fontFamily: fonts.bodyBold, fontSize: 11, color: '#fff' },
 
   upTrack: { height: 10, borderRadius: 999, backgroundColor: colors.bg2, overflow: 'hidden', borderWidth: 1, borderColor: colors.border },
   upFill: { height: '100%', borderRadius: 999 },
