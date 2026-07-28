@@ -15,6 +15,7 @@ import { UsersModule } from './users/users.module.js';
 import { FeedModule } from './feed/feed.module.js';
 import { ReportsModule } from './reports/reports.module.js';
 import { WebhooksModule } from './webhooks/webhooks.module.js';
+import { OperationsModule } from './operations/operations.module.js';
 import { HealthController } from './health/health.controller.js';
 import { ConfigController } from './config/config.controller.js';
 
@@ -37,6 +38,7 @@ import { ConfigController } from './config/config.controller.js';
     FeedModule,
     ReportsModule,
     WebhooksModule,
+    OperationsModule,
   ],
   controllers: [HealthController, ConfigController],
   providers: [

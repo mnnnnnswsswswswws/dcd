@@ -64,3 +64,25 @@ export {
   InMemoryEventPublisher,
 } from './events/event-publisher.js';
 export type { DomainEvent, EventPublisher } from './events/event-publisher.js';
+
+/* Scale S1 — asynchrone Operationen, Projektion und Detail-Cache. */
+export {
+  OperationKind,
+  TransitionOutcome,
+  createOperation,
+  getOperation,
+  isTerminal,
+  markFailed,
+  markRunning,
+  markSucceeded,
+  purgeExpiredOperations,
+} from './operations/async-operations.js';
+export type { OperationView } from './operations/async-operations.js';
+export {
+  ProjectionOutcome,
+  applyChallengeProjection,
+  rebuildChallengeProjection,
+} from './projections/challenge-projection.js';
+export { ChallengeDetailCache } from './challenges/challenge-detail-cache.js';
+export type { PublicChallengeView } from './challenges/challenge-detail-cache.js';
+export { writeOutboxEvent, writeOutboxEvents, Aggregate } from './events/outbox.js';
