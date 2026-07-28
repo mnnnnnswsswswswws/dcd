@@ -11,3 +11,4 @@ export * from './types.js';
 export * from './publisher.js';
 export * from './inbox.js';
 export * from './prisma-store.js';
+export * from './publishers.js';

@@ -98,6 +98,9 @@ importers:
       '@vcp/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@vcp/outbox':
+        specifier: workspace:*
+        version: link:../../packages/outbox
       '@vcp/payments':
         specifier: workspace:^
         version: link:../../packages/payments
@@ -175,6 +178,9 @@ importers:
       '@vcp/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@vcp/outbox':
+        specifier: workspace:*
+        version: link:../../packages/outbox
     devDependencies:
       tsx:
         specifier: '4'

@@ -26,7 +26,8 @@
     "helmet": "8",
     "reflect-metadata": "0.2",
     "rxjs": "7",
-    "zod": "3.23.8"
+    "zod": "3.23.8",
+    "@vcp/outbox": "workspace:*"
   },
   "devDependencies": {
     "@nestjs/testing": "10",
