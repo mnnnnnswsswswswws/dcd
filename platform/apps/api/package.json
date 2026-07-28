@@ -27,7 +27,8 @@
     "reflect-metadata": "0.2",
     "rxjs": "7",
     "zod": "3.23.8",
-    "@vcp/outbox": "workspace:*"
+    "@vcp/outbox": "workspace:*",
+    "@vcp/cache": "workspace:*"
   },
   "devDependencies": {
     "@nestjs/testing": "10",

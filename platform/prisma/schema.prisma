@@ -572,3 +572,27 @@ model ServiceCapacityConfig {
 
   @@map("service_capacity_configs")
 }
+
+/// Read Model der öffentlichen Challenge-Ansicht (Scale S1, Aufgabe 8).
+///
+/// Wird ausschließlich von der Projektion aus Outbox-Events gepflegt, nie direkt
+/// vom Request-Pfad geschrieben. `occupiedSlots` ist bewusst **anzeigeorientiert**:
+/// Es darf hinterherhinken und wird nie zur Entscheidung herangezogen — `join`
+/// zählt weiterhin unter Row-Lock gegen die Primärtabelle (Architekturregel 2).
+model ChallengePublicProjection {
+  challengeId        String    @id @map("challenge_id") @db.Uuid
+  title              String?
+  status             String
+  prizeAmountCents   Int       @map("prize_amount_cents")
+  maxSlots           Int       @map("max_slots")
+  /// Nur Anzeige. Autoritativ ist immer die Slot-Tabelle.
+  occupiedSlots      Int       @default(0) @map("occupied_slots")
+  selectionMode      String    @map("selection_mode")
+  submissionDeadline DateTime? @map("submission_deadline") @db.Timestamptz(6)
+  /// Sequenz des zuletzt angewandten Events — Grundlage der Out-of-order-Abwehr.
+  lastSequence       BigInt    @default(0) @map("last_sequence")
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([status, updatedAt])
+  @@map("challenge_public_projections")
+}
