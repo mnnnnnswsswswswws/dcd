@@ -36,7 +36,23 @@ KEINE Code-Änderung nötig. Vollständige Variablenliste: **`platform/.env.exam
 5. **Frontends:** `NEXT_PUBLIC_API_BASE`, `CORS_ORIGINS`, `pnpm -r build`.
 6. **>>> APPLE / iOS-BUILD — HIER FORTSETZEN <<<** (siehe unten).
 
-## >>> Nächster Schritt: Apple-Build (Phase 6) <<<
+## ⚠️ Richtungswechsel: V2-Auftrag gilt (Compliance zuerst)
+Seit dem V2-Build-Auftrag gilt eine neue verbindliche Reihenfolge (§43): **zuerst die
+Invarianten, die das Geschäftsmodell legal, fair und sicher halten — erst danach Feed
+und visuelles Polishing.** Der Apple-Build unten ist damit **nicht** mehr der nächste
+Schritt, sondern rückt hinter Phase 0B und die offenen Schutztests.
+
+Aktueller Stand und die ehrliche Restliste: **`docs/compliance/V2_GAP_ANALYSIS.md`**.
+
+Bereits als Code vorhanden (mit Tests): `@vcp/compliance` (Legal Launch Gates,
+Anti-Glücksspiel-Invarianten, Stop-the-Line), `@vcp/wellbeing` (Limits, Schutzpausen,
+Risk Engine), `@vcp/ai-governance` (Registry, Entscheidungsmatrix, Reason Statements,
+Appeals), `@vcp/moderation` (deterministische Policy Engine).
+
+Nächste Schritte laut §43: Prisma-Modelle für die neuen Domänen, Spending-Limit-
+Concurrency-Test, Mock AI Safety Gateway, Safety Copilot im Wizard, Red-Team-Suite.
+
+## Apple-Build (Phase 6 — erst nach den Schutztests)
 Ziel: die Mobile-App auf ein echtes iPhone / TestFlight bringen und dort verifizieren,
 dass `recordAsync` + die `expo-video`-Vorschau real funktionieren.
 
