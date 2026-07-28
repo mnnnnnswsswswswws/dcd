@@ -4,6 +4,7 @@ import { canTransitionChallenge } from '@vcp/domain';
 import type { EventPublisher } from '../events/event-publisher.js';
 import { writeAudit } from '../audit/write-audit.js';
 import { writeNotification } from '../notifications/write-notification.js';
+import { Aggregate, writeOutboxEvent } from '../events/outbox.js';
 
 const TRANSACTION_TIMEOUT_MS = 20_000;
 
@@ -136,6 +137,15 @@ export async function confirmFunding(
             : 'Deine Challenge ist jetzt offen für Teilnehmer.',
         });
       }
+
+      // Outbox im selben Commit: Finanzierung bestätigt und Challenge veröffentlicht
+      // sind eine Einheit — kein Event ohne Zustandswechsel und umgekehrt.
+      await writeOutboxEvent(tx, {
+        aggregateType: Aggregate.CHALLENGE,
+        aggregateId: funding.challengeId,
+        eventType: 'challenge.published',
+        payload: { challengeId: funding.challengeId, fundingId: funding.id },
+      });
 
       return { challengeId: funding.challengeId, published: true, alreadyConfirmed: false };
     },

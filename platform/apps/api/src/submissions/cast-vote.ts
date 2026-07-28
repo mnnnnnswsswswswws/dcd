@@ -1,6 +1,7 @@
 import { Prisma, PrismaClient, type ChallengeStatus } from '@prisma/client';
 import { apiError } from '@vcp/contracts';
 import type { EventPublisher } from '../events/event-publisher.js';
+import { Aggregate, writeOutboxEvent } from '../events/outbox.js';
 
 const TRANSACTION_TIMEOUT_MS = 20_000;
 
@@ -70,6 +71,15 @@ export async function castVote(deps: CastVoteDeps, input: CastVoteInput): Promis
       }
 
       const vote = await tx.vote.create({ data: { challengeId, submissionId, voterId } });
+
+      // Outbox im selben Commit (Architekturregel 4).
+      await writeOutboxEvent(tx, {
+        aggregateType: Aggregate.VOTE,
+        aggregateId: vote.id,
+        eventType: 'vote.cast',
+        payload: { challengeId, submissionId, voterId },
+      });
+
       return vote.id;
     },
     {

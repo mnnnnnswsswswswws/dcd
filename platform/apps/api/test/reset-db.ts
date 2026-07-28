@@ -7,6 +7,6 @@ import type { PrismaClient } from '@prisma/client';
  */
 export async function resetDb(prisma: PrismaClient): Promise<void> {
   await prisma.$executeRawUnsafe(
-    'TRUNCATE comments, challenge_likes, challenge_bookmarks, notifications, reports, audit_logs, ledger_entries, payouts, challenge_fundings, votes, evidence_assets, slots, submissions, winner_decisions, challenge_criteria, challenges, users RESTART IDENTITY CASCADE',
+    'TRUNCATE comments, challenge_likes, challenge_bookmarks, notifications, reports, audit_logs, ledger_entries, payouts, challenge_fundings, votes, evidence_assets, slots, submissions, winner_decisions, challenge_criteria, challenges, users, outbox_events, processed_messages RESTART IDENTITY CASCADE',
   );
 }

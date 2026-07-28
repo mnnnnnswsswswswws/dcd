@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { apiError } from '@vcp/contracts';
 import type { EventPublisher } from '../events/event-publisher.js';
 import { writeNotification } from '../notifications/write-notification.js';
+import { Aggregate, writeOutboxEvent } from '../events/outbox.js';
 
 export interface ModerateSubmissionDeps {
   prisma: PrismaClient;
@@ -60,6 +61,20 @@ export async function moderateSubmission(
         input.decision === 'APPROVED'
           ? 'Deine Einsendung wurde freigegeben und ist jetzt gewinnberechtigt.'
           : 'Deine Einsendung wurde leider abgelehnt.',
+    });
+
+    // Outbox im selben Commit. Moderationsentscheidungen sind belastend und
+    // begründungspflichtig — das Event darf nicht ohne die Entscheidung existieren.
+    await writeOutboxEvent(tx, {
+      aggregateType: Aggregate.MODERATION,
+      aggregateId: submission.id,
+      eventType:
+        input.decision === 'APPROVED' ? 'submission.approved' : 'submission.rejected',
+      payload: {
+        submissionId: submission.id,
+        challengeId: submission.challengeId,
+        decision: input.decision,
+      },
     });
 
     return { challengeId: submission.challengeId, status: updated.status };

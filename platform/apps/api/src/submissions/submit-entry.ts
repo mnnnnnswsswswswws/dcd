@@ -2,6 +2,7 @@ import { Prisma, PrismaClient, type ChallengeStatus } from '@prisma/client';
 import { apiError } from '@vcp/contracts';
 import { COUNTING_SLOT_STATUSES } from '@vcp/domain';
 import type { EventPublisher } from '../events/event-publisher.js';
+import { Aggregate, writeOutboxEvent } from '../events/outbox.js';
 
 const COUNTING = COUNTING_SLOT_STATUSES as unknown as string[];
 const TRANSACTION_TIMEOUT_MS = 20_000;
@@ -111,6 +112,14 @@ export async function submitEntry(
       });
       // Slot spiegelt die Einreichung.
       await tx.slot.update({ where: { id: slot.id }, data: { status: 'SUBMITTED' } });
+
+      // Outbox im selben Commit (Architekturregel 4).
+      await writeOutboxEvent(tx, {
+        aggregateType: Aggregate.SUBMISSION,
+        aggregateId: submission.id,
+        eventType: 'submission.finalized',
+        payload: { challengeId, submissionId: submission.id, participantId: userId },
+      });
 
       return submission.id;
     },

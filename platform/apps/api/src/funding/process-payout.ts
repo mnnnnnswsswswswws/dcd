@@ -3,6 +3,7 @@ import { Prisma, PrismaClient, type ChallengeStatus } from '@prisma/client';
 import { apiError } from '@vcp/contracts';
 import type { EventPublisher } from '../events/event-publisher.js';
 import { writeAudit } from '../audit/write-audit.js';
+import { Aggregate, writeOutboxEvent } from '../events/outbox.js';
 
 const TRANSACTION_TIMEOUT_MS = 20_000;
 
@@ -88,6 +89,15 @@ export async function processPayout(
         targetId: challengeId,
         before: { status: 'WINNER_LOCKED' },
         after: { status: 'PAID_OUT', payoutId: payout.id },
+      });
+
+      // Outbox im selben Commit. Auszahlung ist der sensibelste Pfad: Das Event
+      // entsteht nur, wenn die Buchung wirklich committet wurde.
+      await writeOutboxEvent(tx, {
+        aggregateType: Aggregate.PAYOUT,
+        aggregateId: payout.id,
+        eventType: 'payout.succeeded',
+        payload: { challengeId, payoutId: payout.id },
       });
 
       return { status: 'PAID' as const, paid: true, alreadyPaid: false };

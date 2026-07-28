@@ -2,6 +2,7 @@ import { Prisma, PrismaClient, type ChallengeStatus, type SlotStatus } from '@pr
 import { apiError } from '@vcp/contracts';
 import { COUNTING_SLOT_STATUSES, FINAL_SUBMISSION_STATUSES } from '@vcp/domain';
 import type { EventPublisher } from '../events/event-publisher.js';
+import { Aggregate, writeOutboxEvent } from '../events/outbox.js';
 
 /** Slot-Status, die auf das Platz-Limit zählen (typisiert für Prisma-Filter). */
 const COUNTING: SlotStatus[] = COUNTING_SLOT_STATUSES as unknown as SlotStatus[];
@@ -152,6 +153,21 @@ export async function joinChallenge(
           data: { status: desiredStatus },
         });
       }
+
+      // Outbox im SELBEN Commit: Scheitert die Transaktion, existiert auch das
+      // Event nicht (Architekturregel 4).
+      await writeOutboxEvent(tx, {
+        aggregateType: Aggregate.SLOT,
+        aggregateId: slot.id,
+        eventType: 'challenge.slot_reserved',
+        payload: {
+          challengeId,
+          slotId: slot.id,
+          participantId: userId,
+          expiresAt: slot.expiresAt?.toISOString() ?? null,
+          challengeStatus: desiredStatus,
+        },
+      });
 
       return {
         slot: {

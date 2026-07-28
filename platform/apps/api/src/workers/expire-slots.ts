@@ -1,6 +1,7 @@
 import { Prisma, PrismaClient, type ChallengeStatus, type SlotStatus } from '@prisma/client';
 import { COUNTING_SLOT_STATUSES } from '@vcp/domain';
 import type { EventPublisher } from '../events/event-publisher.js';
+import { Aggregate, writeOutboxEvent } from '../events/outbox.js';
 
 /** Slot-Status, die auf das Platz-Limit zählen (typisiert für Prisma-Filter). */
 const COUNTING: SlotStatus[] = COUNTING_SLOT_STATUSES as unknown as SlotStatus[];
@@ -96,6 +97,16 @@ export async function expireSlots(deps: ExpireSlotsDeps): Promise<ExpireSlotsRes
             await tx.challenge.update({ where: { id: challengeId }, data: { status: 'OPEN' } });
             reopened = true;
           }
+        }
+
+        // Outbox im selben Commit — nur wenn tatsächlich Slots freigegeben wurden.
+        if (expired > 0) {
+          await writeOutboxEvent(tx, {
+            aggregateType: Aggregate.CHALLENGE,
+            aggregateId: challengeId,
+            eventType: 'challenge.slots_expired',
+            payload: { challengeId, expiredCount: expired, reopened },
+          });
         }
 
         return { expired, reopened };

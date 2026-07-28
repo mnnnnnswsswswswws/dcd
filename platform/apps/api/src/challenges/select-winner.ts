@@ -4,6 +4,7 @@ import { DecisionSource, canTransitionChallenge } from '@vcp/domain';
 import type { EventPublisher } from '../events/event-publisher.js';
 import { writeAudit } from '../audit/write-audit.js';
 import { writeNotification } from '../notifications/write-notification.js';
+import { Aggregate, writeOutboxEvent } from '../events/outbox.js';
 
 const TRANSACTION_TIMEOUT_MS = 20_000;
 const ACCOUNT_ESCROW = 'CHALLENGE_ESCROW';
@@ -170,6 +171,15 @@ export async function selectWinner(
       });
 
       await tx.challenge.update({ where: { id: challengeId }, data: { status: 'WINNER_LOCKED' } });
+
+      // Outbox im selben Commit: Die Gewinnersperre ist unveränderlich; das Event
+      // darf deshalb weder ohne sie noch sie ohne das Event existieren.
+      await writeOutboxEvent(tx, {
+        aggregateType: Aggregate.CHALLENGE,
+        aggregateId: challengeId,
+        eventType: 'challenge.winner_locked',
+        payload: { challengeId, winnerSubmissionId: winnerId, payoutId: payout.id },
+      });
 
       // Gewinner benachrichtigen.
       const winnerSub = await tx.submission.findUnique({
