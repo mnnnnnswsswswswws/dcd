@@ -13,9 +13,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
   // Laufzeit: gepoolte Verbindung (z. B. Neon `-pooler`, `?pgbouncer=true`).
-  url      = env("DATABASE_URL")
+  url       = env("DATABASE_URL")
   // Migrationen/Introspection: direkte (unpooled) Verbindung. Bei nicht-gepoolten
   // Setups (lokal, CI) einfach denselben Wert wie DATABASE_URL setzen.
   directUrl = env("DIRECT_URL")
@@ -167,7 +167,7 @@ model User {
   bio         String?
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  createdChallenges Challenge[]  @relation("ChallengeCreator")
+  createdChallenges Challenge[]         @relation("ChallengeCreator")
   slots             Slot[]
   submissions       Submission[]
   votes             Vote[]
@@ -195,7 +195,7 @@ model Challenge {
   createdAt          DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt          DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  creator     User                @relation("ChallengeCreator", fields: [creatorId], references: [id])
+  creator     User                 @relation("ChallengeCreator", fields: [creatorId], references: [id])
   slots       Slot[]
   submissions Submission[]
   votes       Vote[]
@@ -409,4 +409,166 @@ model WinnerDecision {
   challenge Challenge @relation(fields: [challengeId], references: [id])
 
   @@map("winner_decisions")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Scale Phase S0 — Zuverlässigkeits- und Skalierungsinfrastruktur.
+//
+// Architekturregel: PostgreSQL bleibt autoritativ. Redis, CDN und Read Models
+// beschleunigen Lesepfade, treffen aber nie allein eine kritische Entscheidung.
+// Kritische Idempotenz liegt deshalb hier, nicht ausschließlich in Redis.
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum OutboxStatus {
+  PENDING
+  PUBLISHING
+  PUBLISHED
+  FAILED
+}
+
+enum AsyncOperationStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+enum IdempotencyStatus {
+  IN_PROGRESS
+  COMPLETED
+}
+
+/// Transactional Outbox: wird im SELBEN Commit wie die Domänenänderung geschrieben.
+/// Dadurch kann ein Event nie ohne die zugehörige Zustandsänderung existieren (und
+/// umgekehrt). Der Publisher liest mit FOR UPDATE SKIP LOCKED und stellt mindestens
+/// einmal zu — Consumer müssen deshalb idempotent bleiben.
+model OutboxEvent {
+  /// Monotone Sequenz für Reihenfolge und Projektions-Checkpoints.
+  sequence      BigInt       @id @default(autoincrement())
+  /// Fachliche Event-ID; wird an den Broker als Deduplizierungsschlüssel gegeben.
+  eventId       String       @unique @default(uuid()) @map("event_id") @db.Uuid
+  aggregateType String       @map("aggregate_type")
+  aggregateId   String       @map("aggregate_id")
+  eventType     String       @map("event_type")
+  payload       Json
+  status        OutboxStatus @default(PENDING)
+  attempts      Int          @default(0)
+  /// Frühester nächster Zustellversuch (Backoff).
+  availableAt   DateTime     @default(now()) @map("available_at") @db.Timestamptz(6)
+  publishedAt   DateTime?    @map("published_at") @db.Timestamptz(6)
+  lastError     String?      @map("last_error")
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([status, availableAt, sequence])
+  @@index([aggregateType, aggregateId])
+  @@map("outbox_events")
+}
+
+/// Consumer-Inbox: hält fest, welcher Handler welche Nachricht bereits verarbeitet
+/// hat. Der Unique-Key ist bewusst (messageId, handlerName) — dieselbe Nachricht darf
+/// von mehreren Handlern verarbeitet werden, aber von jedem genau einmal.
+model ProcessedMessage {
+  id          String   @id @default(uuid()) @db.Uuid
+  messageId   String   @map("message_id")
+  handlerName String   @map("handler_name")
+  /// Optionales Ergebnis, damit ein Retry dieselbe Antwort liefern kann.
+  resultJson  Json?    @map("result_json")
+  processedAt DateTime @default(now()) @map("processed_at") @db.Timestamptz(6)
+
+  @@unique([messageId, handlerName])
+  @@index([processedAt])
+  @@map("processed_messages")
+}
+
+/// Asynchrone Operation hinter 202 Accepted (`GET /v1/operations/:id`).
+/// Lange Arbeit — insbesondere Videoverarbeitung — läuft nie im Request.
+model AsyncOperation {
+  id           String               @id @default(uuid()) @db.Uuid
+  kind         String
+  status       AsyncOperationStatus @default(PENDING)
+  ownerUserId  String?              @map("owner_user_id") @db.Uuid
+  resourceType String?              @map("resource_type")
+  resourceId   String?              @map("resource_id")
+  /// 0..100, rein informativ für die UI.
+  progress     Int                  @default(0)
+  resultJson   Json?                @map("result_json")
+  errorCode    String?              @map("error_code")
+  errorMessage String?              @map("error_message")
+  createdAt    DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+  expiresAt    DateTime?            @map("expires_at") @db.Timestamptz(6)
+
+  @@index([ownerUserId, createdAt])
+  @@index([status, createdAt])
+  @@map("async_operations")
+}
+
+/// Fortschritt einer Read-Model-Projektion. Ermöglicht Wiederaufnahme nach Absturz
+/// und macht Projection Lag messbar.
+model ProjectionCheckpoint {
+  projectionName String   @id @map("projection_name")
+  lastSequence   BigInt   @default(0) @map("last_sequence")
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("projection_checkpoints")
+}
+
+/// Kritische Idempotenz in PostgreSQL (nicht nur Redis): Zahlungen, Auszahlungen,
+/// Gewinnersperre. `requestHash` verhindert, dass derselbe Schlüssel mit anderem
+/// Inhalt wiederverwendet wird.
+model IdempotencyRecord {
+  id           String            @id @default(uuid()) @db.Uuid
+  scope        String
+  key          String
+  requestHash  String            @map("request_hash")
+  status       IdempotencyStatus @default(IN_PROGRESS)
+  responseJson Json?             @map("response_json")
+  createdAt    DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  completedAt  DateTime?         @map("completed_at") @db.Timestamptz(6)
+  expiresAt    DateTime?         @map("expires_at") @db.Timestamptz(6)
+
+  @@unique([scope, key])
+  @@index([expiresAt])
+  @@map("idempotency_records")
+}
+
+/// Versionierte Cache-Namespaces: Invalidierung erfolgt durch Hochzählen der
+/// Version, nicht durch Löschen einzelner Schlüssel. Ein Bump macht alle alten
+/// Schlüssel dieses Namespace unerreichbar und damit sofort wirkungslos.
+model CacheNamespace {
+  namespace String   @id
+  version   Int      @default(1)
+  bumpedAt  DateTime @updatedAt @map("bumped_at") @db.Timestamptz(6)
+
+  @@map("cache_namespaces")
+}
+
+/// Geshardete Zähler gegen Hot-Row-Contention bei viralen Inhalten (Likes, Views).
+/// Bewusst NUR für Anzeigezwecke — niemals für Slot-, Vote- oder Geldentscheidungen.
+model CounterShard {
+  id          String   @id @default(uuid()) @db.Uuid
+  counterType String   @map("counter_type")
+  entityId    String   @map("entity_id")
+  shard       Int
+  value       BigInt   @default(0)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([counterType, entityId, shard])
+  @@index([counterType, entityId])
+  @@map("counter_shards")
+}
+
+/// Abgeleitete Kapazitätskonfiguration je Dienst. Cloud-Run-Maximalinstanzen werden
+/// aus DB-, Redis- und Providerkapazität hergeleitet — nicht frei geraten. Ein
+/// CI-Test validiert das Gesamt-Verbindungsbudget gegen diese Werte.
+model ServiceCapacityConfig {
+  service       String   @id
+  maxInstances  Int      @map("max_instances")
+  concurrency   Int
+  dbPoolSize    Int      @map("db_pool_size")
+  redisPoolSize Int      @default(0) @map("redis_pool_size")
+  notes         String?
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("service_capacity_configs")
 }

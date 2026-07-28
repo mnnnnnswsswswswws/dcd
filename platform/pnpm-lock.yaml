@@ -182,6 +182,8 @@ importers:
 
   packages/ai-governance: {}
 
+  packages/cache: {}
+
   packages/compliance: {}
 
   packages/config:
@@ -195,6 +197,8 @@ importers:
   packages/domain: {}
 
   packages/moderation: {}
+
+  packages/outbox: {}
 
   packages/payments:
     dependencies:
