@@ -193,6 +193,8 @@ importers:
 
   packages/cache: {}
 
+  packages/capacity: {}
+
   packages/compliance: {}
 
   packages/config:

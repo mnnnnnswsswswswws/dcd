@@ -66,6 +66,12 @@ jobs:
       - name: Typecheck
         run: pnpm -r typecheck
 
+      # Verbindungsbudget-Gate (Scale S1, Aufgabe 13): schlaegt fehl, bevor eine
+      # erhoehte max_instances die Datenbank aussperren koennte. Laeuft frueh und
+      # separat, damit die Ursache im CI-Log sofort sichtbar ist.
+      - name: Kapazitaets- und Verbindungsbudget
+        run: pnpm --filter @vcp/capacity test
+
       - name: Unit tests (packages + api)
         run: |
           pnpm -r --filter './packages/*' test
