@@ -106,3 +106,5 @@ export {
   collectReplicaMetrics,
 } from './observability/metrics.js';
 export type { MetricsSnapshot, BusinessIntegritySnapshot } from './observability/metrics.js';
+export { consumeFromOutbox, PROJECTION_NAME, DEFAULT_CONSUME_BATCH } from './projections/consume-outbox.js';
+export type { ConsumeStats } from './projections/consume-outbox.js';

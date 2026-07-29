@@ -8,7 +8,8 @@
     "worker:expire": "tsx src/run-expire-slots.ts",
     "worker:close": "tsx src/run-close-submissions.ts",
     "worker:all": "tsx src/run-all.ts",
-    "worker:outbox": "tsx src/run-outbox-publisher.ts"
+    "worker:outbox": "tsx src/run-outbox-publisher.ts",
+    "worker:projection": "tsx src/run-projection-consumer.ts"
   },
   "dependencies": {
     "@prisma/client": "5.22.0",
