@@ -68,3 +68,19 @@ export function buildDatasourceUrl(
   if (base === undefined || base === '') return undefined;
   return withPoolSettings(base, { poolSize: resolvePoolSize(env) });
 }
+
+/**
+ * Erzeugt einen PrismaClient mit abgeleiteter Poolgröße.
+ *
+ * Bewusst hier und nicht an jeder Aufrufstelle: Sonst nutzt der eine Prozess die
+ * abgeleitete Größe und der nächste Prismas Default — und das Verbindungsbudget
+ * stimmt nur noch für einen Teil der Dienste.
+ */
+export function createPooledPrismaClient<T extends new (options?: never) => unknown>(
+  Ctor: T,
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): InstanceType<T> {
+  const url = buildDatasourceUrl(env);
+  const C = Ctor as unknown as new (options?: { datasources: { db: { url: string } } }) => InstanceType<T>;
+  return url !== undefined ? new C({ datasources: { db: { url } } }) : new C();
+}

@@ -86,3 +86,23 @@ export {
 export { ChallengeDetailCache } from './challenges/challenge-detail-cache.js';
 export type { PublicChallengeView } from './challenges/challenge-detail-cache.js';
 export { writeOutboxEvent, writeOutboxEvents, Aggregate } from './events/outbox.js';
+export {
+  buildDatasourceUrl,
+  resolvePoolSize,
+  withPoolSettings,
+  FALLBACK_POOL_SIZE,
+  createPooledPrismaClient,
+} from './prisma/pool-url.js';
+
+/* Scale S1 — Dashboard-Datenquelle (Aufgabe 15). */
+export {
+  STUCK_OPERATION_MS,
+  collectBusinessIntegrity,
+  collectDbMetrics,
+  collectMetrics,
+  collectOutboxMetrics,
+  collectProjectionMetrics,
+  collectQueueMetrics,
+  collectReplicaMetrics,
+} from './observability/metrics.js';
+export type { MetricsSnapshot, BusinessIntegritySnapshot } from './observability/metrics.js';

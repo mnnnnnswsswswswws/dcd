@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { loadEnv } from '@vcp/config';
+import { createPooledPrismaClient } from '@vcp/api';
 import {
   LoggingBrokerPublisher,
   OutboxPublisher,
@@ -63,7 +64,9 @@ async function createPublisher(): Promise<EventPublisher> {
 
 async function main(): Promise<void> {
   loadEnv();
-  const prisma = new PrismaClient();
+  // Poolgroesse aus DB_POOL_SIZE (Terraform) statt Prisma-Default —
+  // sonst gilt das im CI geprüfte Verbindungsbudget für Worker nicht.
+  const prisma = createPooledPrismaClient(PrismaClient);
   const store = createPrismaOutboxStore(prisma);
   const publisher = await createPublisher();
 

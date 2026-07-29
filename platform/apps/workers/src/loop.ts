@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { LoggingEventPublisher } from '@vcp/api';
+import { createPooledPrismaClient } from '@vcp/api';
 
 const DEFAULT_INTERVAL_MS = 30_000;
 
@@ -18,7 +19,9 @@ export async function runLoop(
   tick: (ctx: WorkerContext) => Promise<void>,
   intervalMs = DEFAULT_INTERVAL_MS,
 ): Promise<void> {
-  const prisma = new PrismaClient();
+  // Poolgroesse aus DB_POOL_SIZE (Terraform) statt Prisma-Default —
+  // sonst gilt das im CI geprüfte Verbindungsbudget für Worker nicht.
+  const prisma = createPooledPrismaClient(PrismaClient);
   const events = new LoggingEventPublisher();
   const ctx: WorkerContext = { prisma, events };
 
