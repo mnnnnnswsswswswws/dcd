@@ -26,12 +26,23 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      redis:
+        image: redis:7
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     env:
       DATABASE_URL: "postgresql://vcp:vcp@localhost:5432/vcp?schema=public"
       # Prisma braucht directUrl für `migrate deploy`; die CI-Postgres ist ungepoolt,
       # daher identisch zu DATABASE_URL.
       DIRECT_URL: "postgresql://vcp:vcp@localhost:5432/vcp?schema=public"
       NEXT_TELEMETRY_DISABLED: "1"
+      # Aktiviert die Cache-Tests gegen echtes Redis; ohne die Variable
+      # werden sie uebersprungen (siehe packages/cache/src/redis-store.test.ts).
+      REDIS_URL: "redis://localhost:6379"
     steps:
       - uses: actions/checkout@v4
 
