@@ -24,6 +24,7 @@ import { PAYMENT_PROVIDER } from '../payments/payments.module.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AuthGuard, type AuthenticatedUser } from '../auth/auth.guard.js';
 import { CurrentUser, CurrentUserId } from '../auth/current-user.decorator.js';
+import { ChallengeDetailCache } from './challenge-detail-cache.js';
 import { joinChallenge, type JoinChallengeResult } from './join-challenge.js';
 import {
   createChallenge,
@@ -50,6 +51,7 @@ export class ChallengesController {
     @Inject(EVENT_PUBLISHER) private readonly events: EventPublisher,
     @Inject(PAYMENT_PROVIDER) private readonly payments: PaymentProvider,
     @Inject(EVIDENCE_STORAGE) private readonly storage: EvidenceStorageProvider,
+    @Inject(ChallengeDetailCache) private readonly detailCache: ChallengeDetailCache,
   ) {}
 
   private get deps() {
@@ -188,9 +190,16 @@ export class ChallengesController {
     if (challenge === null) {
       throw new NotFoundException('Diese Challenge existiert nicht.');
     }
-    const occupied = await this.prisma.slot.count({
-      where: { challengeId: id, status: { in: ['RESERVED', 'CAPTURING', 'UPLOADING', 'SUBMITTED'] } },
-    });
+    // Der Platzstand kommt aus dem Cache über der Projektion statt aus einem
+    // COUNT über `slots`. Genau dieser Aggregat-Scan ist der Teil, der bei einer
+    // viral gehenden Challenge zuerst nachgibt — das Nachschlagen der Stammdaten
+    // über den Primärschlüssel nicht.
+    //
+    // Der Wert ist ausdrücklich anzeigeorientiert und darf hinterherhinken. Für die
+    // Platzvergabe wird er nie herangezogen: `joinChallenge` zählt unter
+    // `SELECT … FOR UPDATE` gegen die Primärtabelle (Architekturregeln 2, 3 und 9).
+    const view = await this.detailCache.get(id);
+    const occupied = view?.occupiedSlotsForDisplay ?? 0;
     const decision = await this.prisma.winnerDecision.findUnique({
       where: { challengeId: id },
       select: { winnerSubmissionId: true, decisionSource: true },

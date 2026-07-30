@@ -3,6 +3,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { loadEnv } from '@vcp/config';
 import { PrismaModule } from './prisma/prisma.module.js';
+import { CacheModule } from './cache/cache.module.js';
 import { EventsModule } from './events/events.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { PaymentsModule } from './payments/payments.module.js';
@@ -27,6 +28,7 @@ import { ConfigController } from './config/config.controller.js';
       skipIf: () => process.env.NODE_ENV === 'test',
     }),
     PrismaModule,
+    CacheModule,
     EventsModule,
     AuthModule,
     PaymentsModule,

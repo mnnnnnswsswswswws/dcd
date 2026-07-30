@@ -18,17 +18,18 @@
     "@nestjs/platform-express": "10",
     "@nestjs/throttler": "6",
     "@prisma/client": "5.22.0",
+    "@vcp/cache": "workspace:*",
     "@vcp/config": "workspace:*",
     "@vcp/contracts": "workspace:*",
     "@vcp/domain": "workspace:*",
+    "@vcp/outbox": "workspace:*",
     "@vcp/payments": "workspace:^",
     "firebase-admin": "12",
     "helmet": "8",
+    "ioredis": "5.11.1",
     "reflect-metadata": "0.2",
     "rxjs": "7",
-    "zod": "3.23.8",
-    "@vcp/outbox": "workspace:*",
-    "@vcp/cache": "workspace:*"
+    "zod": "3.23.8"
   },
   "devDependencies": {
     "@nestjs/testing": "10",

@@ -44,6 +44,26 @@ Schritt, sondern rückt hinter Phase 0B und die offenen Schutztests.
 
 Aktueller Stand und die ehrliche Restliste: **`docs/compliance/V2_GAP_ANALYSIS.md`**.
 
+## Deployment: Infrastruktur ist beschrieben und geprüft
+Der Weg von leerem GCP-Projekt zu laufender Plattform steht in
+**`docs/runbooks/DEPLOY_GCP.md`** — inklusive eines Abschnitts „Was dieses Runbook
+nicht leistet", der die verbleibenden Lücken benennt.
+
+`infrastructure/terraform/` beschreibt Cloud Run (Services für HTTP, **Jobs** für die
+Worker), Cloud SQL, Memorystore, Pub/Sub mit Dead-Letter-Pfad, Artifact Registry,
+Secret-Container und ein Dienstkonto je Dienst. `terraform fmt -check` + `validate`
+laufen in CI mit; ein `plan` gegen ein echtes Projekt steht noch aus und braucht
+Credentials, die nur du hast.
+
+Zwei Dinge, die dabei aufgefallen und korrigiert sind — beides Fälle, in denen die
+Konfiguration für sich stimmte, aber nicht zur Wirklichkeit passte:
+- Die Worker haben keinen HTTP-Listener und hätten als Cloud-Run-**Service** den
+  Startup-Probe nie bestanden. Sie laufen jetzt als Jobs mit Scheduler-Trigger.
+- `admin` und `web` sind reine API-Clients ohne Prisma- oder Redis-Abhängigkeit,
+  bekamen aber DB-Verbindungen budgetiert und hätten `cloudsql.client` plus
+  `DATABASE_URL` erhalten. Poolgröße 0 heißt jetzt „kein Zugriff", und Terraform
+  leitet die Rechte daraus ab — die Kapazitätszahl ist damit auch die Rechtequelle.
+
 Bereits als Code vorhanden (mit Tests): `@vcp/compliance` (Legal Launch Gates,
 Anti-Glücksspiel-Invarianten, Stop-the-Line), `@vcp/wellbeing` (Limits, Schutzpausen,
 Risk Engine), `@vcp/ai-governance` (Registry, Entscheidungsmatrix, Reason Statements,

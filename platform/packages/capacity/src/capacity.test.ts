@@ -81,9 +81,47 @@ describe('Budgetverletzungen werden erkannt', () => {
 
   it('lehnt unsinnige Werte ab', () => {
     const report = computeBudget([
-      { service: 'x', maxInstances: 0, concurrency: 0, dbPoolSize: 0, redisPoolSize: 0 },
+      { service: 'x', maxInstances: 0, concurrency: 0, dbPoolSize: -1, redisPoolSize: -1 },
     ]);
-    expect(report.violations.length).toBeGreaterThanOrEqual(3);
+    expect(report.violations).toEqual([
+      'x: maxInstances muss positiv sein.',
+      'x: concurrency muss positiv sein.',
+      'x: dbPoolSize darf nicht negativ sein.',
+      'x: redisPoolSize darf nicht negativ sein.',
+    ]);
+  });
+
+  it('lässt eine Poolgröße von 0 zu — sie bedeutet "kein Zugriff"', () => {
+    // Wichtig, weil Terraform daraus die Rechte ableitet: admin und web sprechen
+    // nicht mit der Datenbank und bekommen deshalb weder cloudsql.client noch
+    // DATABASE_URL. Würde die 0 hier als Fehler gelten, müssten sie eine Poolgröße
+    // erfinden — und bekämen Rechte, die sie nicht brauchen.
+    const report = computeBudget([
+      { service: 'web', maxInstances: 4, concurrency: 80, dbPoolSize: 0, redisPoolSize: 0 },
+    ]);
+    expect(report.violations).toEqual([]);
+    expect(report.dbUsed).toBe(0);
+  });
+});
+
+describe('Frontends verbrauchen kein Verbindungsbudget', () => {
+  it('führt admin und web mit Poolgröße 0', () => {
+    // Beides sind reine API-Clients (keine @prisma/client- oder Redis-Abhängigkeit).
+    for (const name of ['admin', 'web']) {
+      const s = SERVICE_CAPACITY.find((x) => x.service === name);
+      expect(s, `${name} fehlt in SERVICE_CAPACITY`).toBeDefined();
+      expect(s?.dbPoolSize, `${name}.dbPoolSize`).toBe(0);
+      expect(s?.redisPoolSize, `${name}.redisPoolSize`).toBe(0);
+    }
+  });
+
+  it('budgetiert für Redis nur, was ein einzelner Client öffnet', () => {
+    // Der Adapter hält genau einen ioredis-Client je Instanz. Eine höhere Zahl
+    // würde Verbindungen reservieren, die niemand öffnet — und die Instanzzahl
+    // unnötig begrenzen.
+    for (const s of SERVICE_CAPACITY) {
+      expect(s.redisPoolSize, `${s.service}.redisPoolSize`).toBeLessThanOrEqual(2);
+    }
   });
 });
 

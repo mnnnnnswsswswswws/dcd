@@ -17,7 +17,15 @@ export interface ServiceCapacity {
   readonly maxInstances: number;
   /** Cloud Run: gleichzeitige Requests je Instanz. */
   readonly concurrency: number;
-  /** Verbindungen, die eine Instanz maximal zur Datenbank offen hält. */
+  /**
+   * Verbindungen, die eine Instanz maximal zur Datenbank offen hält.
+   *
+   * `0` heißt: Der Dienst spricht **nicht** mit der Datenbank. Das ist keine
+   * Buchhaltungsfeinheit — Terraform leitet daraus ab, ob der Dienst überhaupt
+   * `roles/cloudsql.client`, das `DATABASE_URL`-Secret und den Cloud-SQL-Mount
+   * bekommt. Eine falsche 0 bricht den Dienst; eine falsche Zahl > 0 vergibt
+   * Rechte, die niemand braucht.
+   */
   readonly dbPoolSize: number;
   /** Verbindungen zu Redis je Instanz (0 = nutzt Redis nicht). */
   readonly redisPoolSize: number;
@@ -61,8 +69,13 @@ export const SERVICE_CAPACITY: readonly ServiceCapacity[] = [
     maxInstances: 20,
     concurrency: 80,
     dbPoolSize: 5,
-    redisPoolSize: 20,
-    notes: 'Öffentlicher Request-Pfad. Kleiner Pool je Instanz, dafür viele Instanzen.',
+    redisPoolSize: 2,
+    notes:
+      'Öffentlicher Request-Pfad. Kleiner Pool je Instanz, dafür viele Instanzen. ' +
+      'Redis 2 statt 20: Der Adapter in apps/api/src/cache/cache.module.ts hält genau ' +
+      'einen ioredis-Client, also eine Verbindung; die zweite deckt die Überlappung ' +
+      'während eines Reconnects. Eine größere Zahl würde Verbindungen budgetieren, ' +
+      'die niemand öffnet.',
   },
   {
     service: 'worker-outbox',
@@ -85,16 +98,27 @@ export const SERVICE_CAPACITY: readonly ServiceCapacity[] = [
     maxInstances: 4,
     concurrency: 1,
     dbPoolSize: 4,
-    redisPoolSize: 10,
-    notes: 'Read-Model-Consumer. Skaliert mit dem Event-Durchsatz.',
+    redisPoolSize: 2,
+    notes: 'Read-Model-Consumer. Skaliert mit dem Event-Durchsatz. Redis wie bei api: ein Client.',
   },
   {
     service: 'admin',
     maxInstances: 2,
     concurrency: 40,
-    dbPoolSize: 3,
-    redisPoolSize: 5,
-    notes: 'Interne Nutzung, niedrige Parallelität.',
+    dbPoolSize: 0,
+    redisPoolSize: 0,
+    notes:
+      'Next.js-Client ohne Server-State: spricht ausschließlich über HTTP mit der API ' +
+      'und hat weder @prisma/client noch einen Redis-Client als Abhängigkeit. Deshalb 0 — ' +
+      'und deshalb weder cloudsql.client noch DATABASE_URL.',
+  },
+  {
+    service: 'web',
+    maxInstances: 4,
+    concurrency: 80,
+    dbPoolSize: 0,
+    redisPoolSize: 0,
+    notes: 'Teilnehmer-Frontend, ebenfalls reiner API-Client. Öffentlich, daher mehr Instanzen als admin.',
   },
 ];
 
@@ -148,8 +172,11 @@ export function computeBudget(
   }
   for (const s of services) {
     if (s.maxInstances <= 0) violations.push(`${s.service}: maxInstances muss positiv sein.`);
-    if (s.dbPoolSize <= 0) violations.push(`${s.service}: dbPoolSize muss positiv sein.`);
     if (s.concurrency <= 0) violations.push(`${s.service}: concurrency muss positiv sein.`);
+    // 0 ist zulässig und bedeutet "kein Zugriff" (siehe ServiceCapacity.dbPoolSize).
+    // Negativ ist immer ein Tippfehler und würde das Budget künstlich schrumpfen.
+    if (s.dbPoolSize < 0) violations.push(`${s.service}: dbPoolSize darf nicht negativ sein.`);
+    if (s.redisPoolSize < 0) violations.push(`${s.service}: redisPoolSize darf nicht negativ sein.`);
   }
 
   return {

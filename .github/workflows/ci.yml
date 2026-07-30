@@ -83,6 +83,23 @@ jobs:
       - name: Kapazitaets- und Verbindungsbudget
         run: pnpm --filter @vcp/capacity test
 
+      # Terraform-Syntax und Provider-Schema pruefen. Braucht keine Cloud-Credentials
+      # (-backend=false), findet aber genau die Fehler, die sonst erst beim Deploy
+      # auffallen: falsche Attributnamen, unbekannte Ressourcen, Tippfehler in
+      # Referenzen. `fmt -check` haelt zusaetzlich die Formatierung stabil.
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+          terraform_wrapper: false
+
+      - name: Terraform validate
+        working-directory: platform/infrastructure/terraform
+        run: |
+          terraform fmt -check -diff
+          terraform init -backend=false -input=false
+          terraform validate
+
       - name: Unit tests (packages + api)
         run: |
           pnpm -r --filter './packages/*' test
