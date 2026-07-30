@@ -59,7 +59,7 @@ describe('In-App-Aufnahme (aktiviert)', () => {
     expect(res.body.longCaptureEnabled).toBe(true);
   });
 
-  it('Intent → Einreichen mit Beweis-Ref (201)', async () => {
+  it('Intent → Einreichen mit Beweis-Ref liefert 202 mit Verfolgungs-URL', async () => {
     const { challengeId, userId } = await seedParticipant();
     const intent = await http()
       .post(`/v1/challenges/${challengeId}/evidence-intent`)
@@ -69,12 +69,31 @@ describe('In-App-Aufnahme (aktiviert)', () => {
     expect(intent.body.evidenceRef).toBeTruthy();
     expect(intent.body.uploadUrl).toContain('mock://upload/');
 
+    // 202 statt 201: Die Einsendung existiert, aber die Prüfung des Videos steht
+    // noch aus (Architekturregel 7). Der Client verfolgt sie über die URL.
     const submitted = await http()
       .post(`/v1/challenges/${challengeId}/submit`)
       .set('Authorization', `Bearer ${userId}`)
       .send({ evidenceRef: intent.body.evidenceRef })
-      .expect(201);
+      .expect(202);
     expect(submitted.body).toMatchObject({ status: 'SUBMITTED' });
+    expect(submitted.body.operationId).toBeTruthy();
+    expect(submitted.headers.location).toBe(`/v1/operations/${submitted.body.operationId}`);
+
+    // Die Verfolgungs-URL ist auch wirklich abrufbar — sonst wäre die
+    // 202-Antwort ein Versprechen ins Leere.
+    const op = await http()
+      .get(submitted.body.operationUrl)
+      .set('Authorization', `Bearer ${userId}`)
+      .expect(200);
+    expect(op.body).toMatchObject({ status: 'PENDING', kind: 'VIDEO_PROCESSING' });
+
+    // Und sie gehört dem Einreichenden: Ein Fremder sieht sie nicht.
+    const fremder = await prisma.user.create({ data: { isAdult: true } });
+    await http()
+      .get(submitted.body.operationUrl)
+      .set('Authorization', `Bearer ${fremder.id}`)
+      .expect(404);
   });
 
   it('Einreichen ohne Beweis-Ref wird abgelehnt (400)', async () => {

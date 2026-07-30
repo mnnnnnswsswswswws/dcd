@@ -24,7 +24,8 @@ export type { CreateEvidenceIntentResult } from './submissions/create-evidence-i
 export { MockEvidenceStorageProvider } from './storage/mock-storage-provider.js';
 export { S3EvidenceStorageProvider } from './storage/s3-storage-provider.js';
 export { presignS3PutUrl, encodeS3Key, encodeRfc3986 } from './storage/s3-presign.js';
-export type { EvidenceStorageProvider } from './storage/storage-provider.js';
+export type { EvidenceStorageProvider, StoredObject } from './storage/storage-provider.js';
+export { createEvidenceStorage, EVIDENCE_STORAGE } from './storage/storage.module.js';
 export { moderateSubmission } from './submissions/moderate-submission.js';
 export { castVote } from './submissions/cast-vote.js';
 export { closeSubmissions } from './challenges/close-submissions.js';
@@ -78,6 +79,12 @@ export {
   purgeExpiredOperations,
 } from './operations/async-operations.js';
 export type { OperationView } from './operations/async-operations.js';
+export {
+  CLAIM_VISIBILITY_MS,
+  EvidenceError,
+  processEvidenceOperations,
+} from './operations/process-evidence.js';
+export type { ProcessEvidenceStats } from './operations/process-evidence.js';
 export {
   ProjectionOutcome,
   applyChallengeProjection,

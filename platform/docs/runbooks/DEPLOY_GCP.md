@@ -175,6 +175,11 @@ gcloud pubsub topics list-subscriptions challenge-events
 gcloud logging read \
   'resource.labels.job_name="worker-projection" AND textPayload:"verarbeitet"' \
   --limit=5 --freshness=10m
+
+# 6. Beweisprüfung laeuft — sonst bleibt jede 202-Antwort fuer immer PENDING
+gcloud logging read \
+  'resource.labels.job_name="worker-sweeps" AND textPayload:"beweise_geprueft"' \
+  --limit=5 --freshness=10m
 ```
 
 Kommt bei (2) nichts zurück, läuft der Dienst mit der Fallback-Poolgröße aus

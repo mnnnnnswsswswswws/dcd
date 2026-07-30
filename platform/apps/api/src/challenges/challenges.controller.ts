@@ -9,8 +9,10 @@ import {
   ParseUUIDPipe,
   Post,
   Query,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import type { PaymentProvider } from '@vcp/payments';
 import { ChallengeStatus } from '@vcp/domain';
 import { apiError } from '@vcp/contracts';
@@ -248,19 +250,33 @@ export class ChallengesController {
    * (`LONG_CAPTURE_ENABLED`) ist ein gültiger `evidenceRef` erforderlich; sonst Stub.
    */
   @Post(':id/submit')
-  @HttpCode(201)
   @UseGuards(AuthGuard)
   async submit(
     @Param('id', new ParseUUIDPipe()) id: string,
     @CurrentUserId() userId: string,
     @Body() body: { evidenceRef?: string },
+    @Res({ passthrough: true }) res: Response,
   ) {
-    return submitEntry(this.deps, {
+    const result = await submitEntry(this.deps, {
       challengeId: id,
       userId,
       evidenceRef: body?.evidenceRef,
       requireEvidence: this.longCaptureEnabled,
     });
+
+    // Ohne Beweisvideo ist mit der Antwort alles erledigt: 201 Created.
+    if (result.operationId === undefined) {
+      res.status(201);
+      return result;
+    }
+
+    // Mit Beweisvideo steht die Prüfung noch aus — die Einsendung existiert, ist
+    // aber noch nicht vollständig verarbeitet. Genau dafür ist 202 da
+    // (Architekturregel 7). Der Client verfolgt den Rest über die URL, statt eine
+    // Verbindung offen zu halten.
+    res.status(202);
+    res.setHeader('Location', `/v1/operations/${result.operationId}`);
+    return { ...result, operationUrl: `/v1/operations/${result.operationId}` };
   }
 
   /** Zählt eine Community-Stimme für eine Einsendung. */

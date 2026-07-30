@@ -3,6 +3,7 @@ import { apiError } from '@vcp/contracts';
 import { COUNTING_SLOT_STATUSES } from '@vcp/domain';
 import type { EventPublisher } from '../events/event-publisher.js';
 import { Aggregate, writeOutboxEvent } from '../events/outbox.js';
+import { OPERATION_TTL_MS, OperationKind } from '../operations/async-operations.js';
 
 const COUNTING = COUNTING_SLOT_STATUSES as unknown as string[];
 const TRANSACTION_TIMEOUT_MS = 20_000;
@@ -28,6 +29,12 @@ export interface SubmitEntryInput {
 export interface SubmitEntryResult {
   submissionId: string;
   status: 'SUBMITTED';
+  /**
+   * Gesetzt, wenn ein Beweisvideo gebunden wurde: Dessen Prüfung läuft asynchron
+   * weiter. Der Aufrufer antwortet dann mit `202` und dieser Verfolgungs-ID
+   * (Architekturregel 7).
+   */
+  operationId?: string;
 }
 
 interface LockedChallengeRow {
@@ -56,7 +63,7 @@ export async function submitEntry(
     throw apiError('EVIDENCE_REQUIRED');
   }
 
-  const submissionId = await deps.prisma.$transaction(
+  const { submissionId, operationId } = await deps.prisma.$transaction(
     async (tx) => {
       const locked = await tx.$queryRaw<LockedChallengeRow[]>(Prisma.sql`
         SELECT id, creator_id, status, submission_deadline
@@ -113,6 +120,31 @@ export async function submitEntry(
       // Slot spiegelt die Einreichung.
       await tx.slot.update({ where: { id: slot.id }, data: { status: 'SUBMITTED' } });
 
+      // Prüfauftrag für das Beweisvideo — im **selben** Commit wie die Einsendung.
+      //
+      // Bis hierher galt ein Beweis als vorhanden, weil der Client es sagte: Er
+      // bekam eine signierte Upload-URL und meldete danach die Einsendung, ohne
+      // dass je jemand nachsah, ob Bytes ankamen. Eine Einsendung ohne Video wäre
+      // erst bei der Gewinnerauswahl aufgefallen.
+      //
+      // Die Prüfung selbst ist ein Netzwerkaufruf und gehört nicht in diese
+      // Transaktion — sie hält den Slot. Deshalb nur der Auftrag hier, gekoppelt
+      // wie das Outbox-Ereignis: Gibt es die Einsendung, gibt es auch den Auftrag.
+      let operationId: string | undefined;
+      if (boundEvidenceRef !== null) {
+        const op = await tx.asyncOperation.create({
+          data: {
+            kind: OperationKind.VIDEO_PROCESSING,
+            status: 'PENDING',
+            ownerUserId: userId,
+            resourceType: 'submission',
+            resourceId: submission.id,
+            expiresAt: new Date(now.getTime() + OPERATION_TTL_MS),
+          },
+        });
+        operationId = op.id;
+      }
+
       // Outbox im selben Commit (Architekturregel 4).
       await writeOutboxEvent(tx, {
         aggregateType: Aggregate.SUBMISSION,
@@ -121,7 +153,7 @@ export async function submitEntry(
         payload: { challengeId, submissionId: submission.id, participantId: userId },
       });
 
-      return submission.id;
+      return { submissionId: submission.id, operationId };
     },
     {
       isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
@@ -136,5 +168,5 @@ export async function submitEntry(
     payload: { challengeId, submissionId, participantId: userId },
   });
 
-  return { submissionId, status: 'SUBMITTED' };
+  return { submissionId, status: 'SUBMITTED', ...(operationId !== undefined ? { operationId } : {}) };
 }

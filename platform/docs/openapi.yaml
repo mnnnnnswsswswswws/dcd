@@ -293,6 +293,13 @@ paths:
       description: >-
         Bei aktivierter In-App-Aufnahme (LONG_CAPTURE_ENABLED) ist ein gültiger
         evidenceRef aus /evidence-intent erforderlich; sonst Stub ohne Beweis.
+
+
+        Der Statuscode sagt, ob noch etwas aussteht: Mit Beweisvideo wird 202
+        geantwortet, weil die Einsendung zwar existiert, ihr Video aber noch
+        geprüft wird (es wird nachgesehen, ob der Upload tatsächlich ankam). Der
+        Fortschritt ist unter der Location-URL bzw. operationUrl abrufbar. Ohne
+        Beweisvideo ist mit der Antwort alles erledigt: 201.
       security: [{ bearerAuth: [] }]
       parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
       requestBody:
@@ -302,7 +309,30 @@ paths:
               type: object
               properties: { evidenceRef: { type: string, format: uuid } }
       responses:
-        '201': { description: Eingereicht }
+        '201':
+          description: Eingereicht, nichts steht mehr aus (ohne Beweisvideo)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  submissionId: { type: string, format: uuid }
+                  status: { type: string, enum: [SUBMITTED] }
+        '202':
+          description: Eingereicht, Beweisprüfung läuft
+          headers:
+            Location:
+              description: Verfolgungs-URL der Operation
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  submissionId: { type: string, format: uuid }
+                  status: { type: string, enum: [SUBMITTED] }
+                  operationId: { type: string, format: uuid }
+                  operationUrl: { type: string }
         '400': { $ref: '#/components/responses/ErrorResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
