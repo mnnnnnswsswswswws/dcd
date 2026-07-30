@@ -242,3 +242,60 @@ describe('Regel 9: Anzeige-Slotzahl beeinflusst die Platzvergabe nicht', () => {
     expect(await prisma.slot.count({ where: { status: 'RESERVED' } })).toBe(10);
   });
 });
+
+describe('Out-of-order-Schutz unter parallelen Consumern', () => {
+  it('lässt last_sequence nie hinter die höchste angewandte Sequenz zurückfallen', async () => {
+    // Gefunden beim Lauf gegen echtes Pub/Sub: Ein Abonnement stellt gleichzeitig
+    // zu, und Terraform stellt vier Projektions-Instanzen bereit. Ein
+    // Lesen-Vergleichen-Schreiben lässt dann zwei Transaktionen denselben Stand
+    // lesen — beide halten ihre Nachricht für die neuere, die zuletzt schreibende
+    // gewinnt, und der Zähler bleibt zurück.
+    const { challengeId } = await seed();
+
+    const nachrichten = [1n, 2n, 3n, 4n, 5n, 6n, 7n, 8n].map((sequence) => ({
+      messageId: `parallel-${sequence}`,
+      eventType: 'challenge.slot_reserved',
+      aggregateType: 'slot',
+      aggregateId: 'slot-1',
+      sequence,
+      payload: { challengeId },
+    }));
+
+    const ergebnisse = await Promise.all(
+      nachrichten.map((m) => applyChallengeProjection(prisma, m)),
+    );
+
+    const angewandt = ergebnisse
+      .map((r, i) => (r.outcome === ProjectionOutcome.APPLIED ? nachrichten[i]!.sequence : 0n))
+      .filter((s) => s > 0n);
+    const hoechsteAngewandt = angewandt.reduce((a, b) => (a > b ? a : b), 0n);
+
+    const p = await prisma.challengePublicProjection.findUnique({ where: { challengeId } });
+    expect(p?.lastSequence).toBe(hoechsteAngewandt);
+  });
+
+  it('verwirft eine verspätete ältere Nachricht auch im Wettlauf', async () => {
+    const { challengeId } = await seed();
+    await applyChallengeProjection(prisma, {
+      messageId: 'spaet-neu',
+      eventType: 'challenge.slot_reserved',
+      aggregateType: 'slot',
+      aggregateId: 'slot-1',
+      sequence: 100n,
+      payload: { challengeId },
+    });
+
+    const alt = await applyChallengeProjection(prisma, {
+      messageId: 'spaet-alt',
+      eventType: 'challenge.slot_reserved',
+      aggregateType: 'slot',
+      aggregateId: 'slot-1',
+      sequence: 99n,
+      payload: { challengeId },
+    });
+
+    expect(alt.outcome).toBe(ProjectionOutcome.STALE);
+    const p = await prisma.challengePublicProjection.findUnique({ where: { challengeId } });
+    expect(p?.lastSequence).toBe(100n);
+  });
+});

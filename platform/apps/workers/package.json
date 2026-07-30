@@ -12,6 +12,7 @@
     "worker:projection": "tsx src/run-projection-consumer.ts"
   },
   "dependencies": {
+    "@google-cloud/pubsub": "^5.3.1",
     "@prisma/client": "5.22.0",
     "@vcp/api": "workspace:*",
     "@vcp/config": "workspace:*",

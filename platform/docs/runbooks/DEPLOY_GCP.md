@@ -207,8 +207,10 @@ Ehrlich benannt, damit niemand es für erledigt hält:
   mit `terraform validate` gegen das Provider-Schema geprüft (auch in CI), aber
   Fehler, die erst gegen die echte API auftreten — Kontingente, Namenskonflikte,
   Regionsverfügbarkeit —, treten beim ersten `plan` auf.
-- **Pub/Sub ist nie gegen ein echtes Topic gelaufen.** Publisher und Consumer sind
-  gegen In-Memory-Doubles und die Direktmodus-Variante geprüft.
+- **Pub/Sub ist nie gegen ein Topic in der echten Cloud gelaufen** — wohl aber gegen
+  den offiziellen Emulator mit dem echten Client (siehe Abschnitt 6). Was der
+  Emulator nicht abbildet: Kontingente, IAM, regionsübergreifende Zustellung und
+  die tatsächliche Durchsetzung der Ordering-Regeln.
 - **Kein Custom Domain, kein Load Balancer, kein CDN.** Cloud Run liefert
   `*.run.app`-URLs. Für den öffentlichen Betrieb fehlen Domain-Mapping und
   Cache-Header vor dem Feed.
@@ -219,3 +221,48 @@ Ehrlich benannt, damit niemand es für erledigt hält:
   Die Kapazitätszahlen sind hergeleitet, nicht gemessen.
 - **Kein Echtgeld.** `REAL_MONEY_ENABLED` bleibt aus. Die Anwendung startet mit
   `true` ohne echten Zahlungsanbieter absichtlich nicht.
+
+---
+
+## 6. Pub/Sub lokal prüfen (ohne Cloud-Zugang)
+
+Die Ereigniskette lässt sich vollständig gegen einen **echten** Pub/Sub-Client
+durchspielen — der offizielle Emulator braucht weder Projekt noch Credentials.
+
+```sh
+gcloud components install pubsub-emulator --quiet
+gcloud beta emulators pubsub start --project=vcp-test --host-port=127.0.0.1:8685 --quiet
+
+# in einer zweiten Shell
+export PUBSUB_EMULATOR_HOST=127.0.0.1:8685
+pnpm --filter @vcp/outbox test
+```
+
+Ohne gesetzte `PUBSUB_EMULATOR_HOST` überspringen sich die Broker-Tests sauber; CI
+bleibt dadurch grün, ohne Java zu installieren.
+
+### Was dieser Weg gefunden hat
+
+Beide Punkte hätten Doubles nicht zeigen können — sie bestätigen nur, dass der
+Adapter aufruft, was der Adapter aufrufen soll:
+
+1. **`@google-cloud/pubsub` war in `apps/workers` nicht deklariert.** Der Client wird
+   über einen Variablen-Spezifizierer geladen, damit TypeScript ihn nicht statisch
+   auflöst — dadurch fiel das fehlende Manifest weder beim Typecheck noch beim Build
+   auf. In Cloud Run setzt Terraform `PUBSUB_TOPIC` immer, und der Worker bricht dann
+   fail-closed ab. Der Startfehler wäre erst im Deployment sichtbar geworden.
+
+2. **Der Out-of-order-Schutz der Projektion war ein Read-Modify-Write.** Ein
+   Abonnement stellt gleichzeitig zu, und die Kapazitätstabelle sieht vier
+   Projektions-Instanzen vor. Zwei Transaktionen lasen denselben `last_sequence`,
+   beide hielten ihre Nachricht für die neuere, die zuletzt schreibende gewann —
+   der Zähler blieb hinter der höchsten angewandten Sequenz zurück. Der *Zustand*
+   war trotzdem korrekt, weil die Projektion aus der Primärquelle liest statt aus
+   dem Payload fortzuschreiben; der Schutz war aber schwächer als sein Name.
+   Er entscheidet jetzt in einer Anweisung
+   (`ON CONFLICT DO UPDATE … WHERE last_sequence < EXCLUDED.last_sequence`) unter
+   der Zeilensperre, die der Konflikt ohnehin nimmt.
+
+Nachgestellt mit drei gleichzeitigen Zustellungen: drei Ereignisse in die Outbox,
+drei über den echten Client zugestellt, zwei angewandt und eines korrekt als
+`STALE` abgewiesen — Read Model `belegt=3/10`, `last_sequence=3`.

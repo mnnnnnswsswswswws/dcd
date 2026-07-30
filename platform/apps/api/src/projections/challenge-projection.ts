@@ -94,15 +94,6 @@ export async function applyChallengeProjection(
         return { outcome: ProjectionOutcome.IGNORED, challengeId };
       }
 
-      const existing = await tx.challengePublicProjection.findUnique({
-        where: { challengeId },
-      });
-
-      // 3. Out-of-order: verspätete ältere Nachricht verwerfen.
-      if (existing !== null && msg.sequence <= existing.lastSequence) {
-        return { outcome: ProjectionOutcome.STALE, challengeId };
-      }
-
       // Anzeige-Slotzahl: aus der Primärtabelle abgeleitet, aber ausdrücklich nur
       // für die Darstellung. Ein Rückstand hier ist unkritisch.
       const occupiedSlots = await tx.slot.count({
@@ -112,22 +103,46 @@ export async function applyChallengeProjection(
         },
       });
 
-      const data = {
-        title: challenge.title,
-        status: challenge.status,
-        prizeAmountCents: challenge.prizeAmountCents,
-        maxSlots: challenge.maxSlots,
-        occupiedSlots,
-        selectionMode: challenge.selectionMode,
-        submissionDeadline: challenge.submissionDeadline,
-        lastSequence: msg.sequence,
-      };
+      // 3. Schreiben und Out-of-order-Schutz in **einer** Anweisung.
+      //
+      // Der naheliegende Weg — lastSequence lesen, vergleichen, dann schreiben —
+      // ist ein Read-Modify-Write und unter parallelen Consumern ein Rennen: Zwei
+      // Transaktionen lesen denselben Stand, beide halten ihre Nachricht für neuer,
+      // und die zuletzt schreibende gewinnt. Beobachtet gegen echtes Pub/Sub mit
+      // vier gleichzeitigen Zustellungen: `last_sequence` blieb hinter der höchsten
+      // angewandten Sequenz zurück. Der Zustand war trotzdem korrekt (er wird aus
+      // der Primärquelle gelesen, nicht aus dem Payload fortgeschrieben) — aber der
+      // Schutz war schwächer als sein Name verspricht.
+      //
+      // `ON CONFLICT DO UPDATE … WHERE` entscheidet stattdessen die Datenbank, unter
+      // der Zeilensperre, die der Konflikt ohnehin nimmt. Genau wie beim
+      // Duplikatschutz zwei Schritte weiter oben.
+      const betroffen = await tx.$executeRaw`
+        INSERT INTO "challenge_public_projections" (
+          "challenge_id", "title", "status", "prize_amount_cents", "max_slots",
+          "occupied_slots", "selection_mode", "submission_deadline", "last_sequence", "updated_at"
+        ) VALUES (
+          ${challengeId}::uuid, ${challenge.title}, ${challenge.status},
+          ${challenge.prizeAmountCents}, ${challenge.maxSlots}, ${occupiedSlots},
+          ${challenge.selectionMode}, ${challenge.submissionDeadline}, ${msg.sequence}, now()
+        )
+        ON CONFLICT ("challenge_id") DO UPDATE SET
+          "title" = EXCLUDED."title",
+          "status" = EXCLUDED."status",
+          "prize_amount_cents" = EXCLUDED."prize_amount_cents",
+          "max_slots" = EXCLUDED."max_slots",
+          "occupied_slots" = EXCLUDED."occupied_slots",
+          "selection_mode" = EXCLUDED."selection_mode",
+          "submission_deadline" = EXCLUDED."submission_deadline",
+          "last_sequence" = EXCLUDED."last_sequence",
+          "updated_at" = now()
+        WHERE "challenge_public_projections"."last_sequence" < EXCLUDED."last_sequence"
+      `;
 
-      await tx.challengePublicProjection.upsert({
-        where: { challengeId },
-        create: { challengeId, ...data },
-        update: data,
-      });
+      // Keine Zeile berührt heißt: Es lag bereits ein neuerer Stand vor.
+      if (betroffen === 0) {
+        return { outcome: ProjectionOutcome.STALE, challengeId };
+      }
 
       return { outcome: ProjectionOutcome.APPLIED, challengeId };
     });

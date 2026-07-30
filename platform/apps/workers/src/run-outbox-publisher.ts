@@ -40,8 +40,10 @@ async function createPublisher(): Promise<EventPublisher> {
   }
   try {
     // Spezifizierer bewusst als Variable: So versucht TypeScript nicht, das Modul
-    // statisch aufzulösen, und `@google-cloud/pubsub` bleibt eine echte optionale
-    // Laufzeit-Abhängigkeit, die lokale Läufe und CI nicht installieren müssen.
+    // statisch aufzulösen. Das Paket ist eine **deklarierte** Abhängigkeit dieses
+    // Workers — ohne sie bräche der Start in Cloud Run, weil Terraform PUBSUB_TOPIC
+    // dort immer setzt. Geladen wird sie trotzdem nur bei Bedarf: Lokal und in CI
+    // läuft der Worker ohne Topic über den Logging-Adapter und fasst sie nie an.
     const specifier = '@google-cloud/pubsub';
     const mod = (await import(specifier)) as unknown as {
       PubSub: new () => { topic(name: string, opts?: unknown): TopicClient };
