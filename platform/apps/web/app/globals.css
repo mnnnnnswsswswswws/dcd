@@ -1,0 +1,920 @@
+/* Video-Challenges — ruhiges, komfortables Design.
+   Leitgedanke: simpel, lesbar, funktional. Jedes Element hat einen Grund; kein
+   Korn, kein Glow, keine Funken, keine Display-Dramatik. Ein neutrales, weiches
+   Dunkel (angenehm beim langen Scrollen), EIN Akzent (Grün = Geld/positiv/aktiv),
+   Rot nur fürs Herz. Figtree durchgehend, klare Typo-Hierarchie. */
+@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap');
+
+:root {
+  color-scheme: dark;
+  /* Weiches, neutrales Dunkel — nicht hart schwarz, nicht bunt. */
+  --bg: #16171b;
+  --bg-2: #1b1d22;
+  --surface: #1f2229;
+  --surface-2: #262a32;
+  --line: rgba(255, 255, 255, 0.09);
+  --line-2: rgba(255, 255, 255, 0.15);
+  --text: #edeff3;
+  --muted: #9aa1ac;
+  --faint: #6c727c;
+  /* Ein ruhiger Akzent: Geld, positive/aktive Zustände, primäre Aktion. */
+  --accent: #46c98a;
+  --accent-2: #3bb87c;
+  --accent-ink: #08130d;
+  /* Rot nur fürs Herz/Gefahr. */
+  --like: #f26d72;
+  --danger: #f26d72;
+  --radius: 16px;
+  --radius-lg: 22px;
+  --tabbar-h: 66px;
+  --font: "Figtree", system-ui, -apple-system, sans-serif;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Spielerische Feder mit leichtem Überschwingen — für Pop/Bounce-Interaktionen. */
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  max-width: 540px;
+  margin: 0 auto;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 16px 28px;
+}
+main:has(.feed) {
+  padding: 0;
+  overflow: hidden;
+}
+
+/* ---------- Typo: eine klare, ruhige Skala ---------- */
+h1 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0.2em 0 0.5em;
+}
+h2 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0.4em 0 0.5em;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+p {
+  margin: 0.5em 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Freundlicher Einstieg: ein leichter Aufwärts-Bounce. */
+main > * {
+  animation: pop-in 0.4s var(--spring) both;
+}
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(9px) scale(0.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.page {
+  padding: 16px 16px calc(var(--tabbar-h) + 28px);
+}
+
+/* ---------- DEMO-Banner ---------- */
+.demobar {
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--line);
+  color: var(--faint);
+  font-size: 0.72rem;
+  text-align: center;
+  padding: 7px 12px;
+}
+
+/* ---------- Bottom-Nav ---------- */
+.tabbar {
+  flex: none;
+  width: 100%;
+  max-width: 540px;
+  margin: 0 auto;
+  z-index: 50;
+  height: var(--tabbar-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 6px env(safe-area-inset-bottom, 0px);
+  background: var(--bg-2);
+  border-top: 1px solid var(--line);
+}
+.tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  flex: 1;
+  color: var(--faint);
+  font-size: 0.64rem;
+  font-weight: 600;
+  padding: 6px 0;
+  transition: color 0.18s var(--ease);
+}
+.tab:hover {
+  text-decoration: none;
+  color: var(--muted);
+}
+.tab.active {
+  color: var(--text);
+}
+.tab svg {
+  width: 23px;
+  height: 23px;
+}
+.tab .plus {
+  width: 46px;
+  height: 30px;
+  border-radius: 11px;
+  background: var(--accent);
+  display: grid;
+  place-items: center;
+  color: var(--accent-ink);
+  transition: transform 0.3s var(--spring);
+}
+.tab:hover .plus {
+  transform: translateY(-2px) scale(1.06) rotate(-3deg);
+}
+.tab:active .plus {
+  transform: scale(0.9);
+}
+.tab .plus svg {
+  width: 21px;
+  height: 21px;
+}
+
+/* ---------- Feed: ruhig, klare Informations-Hierarchie ---------- */
+.feed {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+}
+.feed::-webkit-scrollbar {
+  display: none;
+}
+.feed-item {
+  position: relative;
+  height: 100%;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 0 16px 26px;
+  overflow: hidden;
+}
+.feed-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+/* Nur so viel Abdunkeln, wie der Text zum Lesen braucht — kein Kino-Effekt. */
+.feed-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 45%, rgba(12, 13, 16, 0.72) 100%);
+}
+/* Kategorie-Symbol: freundlich groß, mit sanftem Auftauch-Pop und leichtem Wippen. */
+.feed-emoji {
+  position: absolute;
+  top: 19%;
+  left: 0;
+  right: 0;
+  display: grid;
+  place-items: center;
+  font-size: 4.2rem;
+  z-index: 1;
+  animation: emoji-in 0.5s var(--spring) both, bob 4s ease-in-out 0.5s infinite;
+}
+@keyframes emoji-in {
+  from { opacity: 0; transform: scale(0.6) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes bob {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  50% { transform: translateY(-8px) rotate(3deg); }
+}
+.feed-content {
+  position: relative;
+  z-index: 2;
+  max-width: 84%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.feed-creator {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.feed-creator .handle {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.feed-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  margin: 2px 0;
+  color: #fff;
+}
+.feed-prizeline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+/* Preisgeld: klar und lesbar hervorgehoben — nicht überlebensgroß. */
+.feed-prize {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--accent);
+}
+.feed-prize small {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted);
+  margin-left: 5px;
+}
+.feed-sub {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+/* Primäre Aktion: ein ruhiger, klarer Button. */
+.feed-cta {
+  margin-top: 10px;
+  align-self: flex-start;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border: none;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 0.94rem;
+  padding: 13px 22px;
+  transition: background 0.18s var(--ease), transform 0.25s var(--spring);
+}
+.feed-cta:hover {
+  background: var(--accent-2);
+  transform: translateY(-2px);
+}
+.feed-cta:active {
+  transform: scale(0.96);
+}
+
+/* Aktions-Leiste: klare Icons + echte Zähler, dezent. */
+.feed-rail {
+  position: absolute;
+  right: 12px;
+  bottom: 28px;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+}
+.rail-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0;
+  cursor: pointer;
+  transition: transform 0.12s var(--ease);
+}
+.rail-btn:active {
+  transform: scale(0.9);
+}
+.rail-btn svg {
+  width: 25px;
+  height: 25px;
+  padding: 10px;
+  box-sizing: content-box;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.32);
+  transition: background 0.18s var(--ease), color 0.18s var(--ease), transform 0.3s var(--spring);
+}
+.rail-btn:hover svg {
+  background: rgba(0, 0, 0, 0.5);
+  transform: translateY(-2px);
+}
+.rail-btn.on {
+  color: var(--like);
+}
+/* Zufriedenstellender Feder-Pop beim Liken (tasteful, ohne Funken-Feuerwerk). */
+.rail-btn.on svg {
+  animation: like-pop 0.4s var(--spring);
+}
+@keyframes like-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.3); }
+  70% { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+
+/* Status: schlicht, mit ruhigem Punkt (kein Puls). */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(70, 201, 138, 0.12);
+  border: 1px solid rgba(70, 201, 138, 0.32);
+  color: var(--accent);
+  border-radius: 8px;
+  padding: 4px 11px;
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+.status-pill::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.avatar-grad {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 1rem;
+  flex: none;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.14);
+}
+
+/* ---------- Karten / Komponenten: schlicht, klar ---------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.card.tap {
+  display: block;
+  color: inherit;
+  transition: border-color 0.18s var(--ease), transform 0.25s var(--spring);
+}
+.card.tap:hover {
+  text-decoration: none;
+  border-color: var(--line-2);
+  transform: translateY(-2px);
+}
+.card.tap:active {
+  transform: scale(0.99);
+}
+.hero {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.hero p {
+  color: var(--muted);
+  max-width: 46ch;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.82rem;
+  color: var(--muted);
+  gap: 6px;
+}
+input,
+select,
+textarea {
+  font: inherit;
+  font-size: 0.92rem;
+  width: 100%;
+  padding: 11px 13px;
+  color: var(--text);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  transition: border-color 0.18s var(--ease);
+}
+textarea {
+  resize: vertical;
+  min-height: 84px;
+}
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+}
+option {
+  color: #111;
+}
+
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--line-2);
+  padding: 10px 16px;
+  border-radius: 11px;
+  transition: background 0.18s var(--ease), transform 0.25s var(--spring);
+}
+button:hover:not(:disabled) {
+  background: var(--surface);
+  transform: translateY(-1px);
+}
+button:active:not(:disabled) {
+  transform: scale(0.96);
+}
+button.primary {
+  background: var(--accent);
+  border: none;
+  color: var(--accent-ink);
+}
+button.primary:hover:not(:disabled) {
+  background: var(--accent-2);
+}
+button.ghost {
+  background: transparent;
+}
+button.danger {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--line));
+  background: transparent;
+}
+button.sm {
+  padding: 7px 12px;
+  font-size: 0.82rem;
+  border-radius: 9px;
+}
+button:disabled {
+  opacity: 0.42;
+  cursor: default;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 7px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.badge.open {
+  background: rgba(70, 201, 138, 0.12);
+  border-color: rgba(70, 201, 138, 0.32);
+  color: var(--accent);
+}
+.badge.done {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.badge.warn {
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+  border-color: color-mix(in srgb, var(--danger) 34%, transparent);
+  color: var(--danger);
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.between {
+  justify-content: space-between;
+}
+.grid {
+  display: grid;
+  gap: 12px;
+}
+.stack {
+  display: grid;
+  gap: 10px;
+}
+.muted {
+  color: var(--muted);
+}
+.error {
+  color: var(--danger);
+}
+.note {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 11px 14px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.prize {
+  font-weight: 800;
+  font-size: 1.15rem;
+  color: var(--accent);
+}
+code {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 1px 6px;
+  font-size: 0.85em;
+  word-break: break-all;
+}
+
+.progress {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg-2);
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+.progress > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: inherit;
+  transition: width 0.5s var(--ease);
+}
+
+.sub {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.sub .spacer {
+  margin-left: auto;
+}
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  display: grid;
+  place-items: center;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #fff;
+  flex: none;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.12);
+}
+
+/* ---------- Skeleton-Loading ---------- */
+.skel-item {
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 0 16px 26px;
+  gap: 10px;
+}
+.skel {
+  border-radius: 9px;
+  background: linear-gradient(100deg, rgba(255, 255, 255, 0.05) 40%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0.05) 60%);
+  background-size: 220% 100%;
+  animation: skel 1.4s ease-in-out infinite;
+}
+@keyframes skel {
+  to { background-position: -220% 0; }
+}
+
+/* ---------- Onboarding · „Der Reveal" (Vollbild) ----------
+   Bühne für ECHTE Challenges. Ein Fokus: das Preisgeld. Live-Beleg statt Deko. */
+.onb {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background:
+    radial-gradient(120% 70% at 50% 8%, rgba(70, 201, 138, 0.1), transparent 60%),
+    var(--bg);
+  display: flex;
+  flex-direction: column;
+  padding: calc(env(safe-area-inset-top, 0px) + 18px) 22px calc(env(safe-area-inset-bottom, 0px) + 22px);
+  animation: fade 0.25s var(--ease) both;
+}
+.onb-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.onb-skip {
+  background: transparent;
+  border: none;
+  color: var(--faint);
+  font-size: 0.84rem;
+  font-weight: 600;
+  padding: 6px 4px;
+}
+.onb-skip:hover:not(:disabled) {
+  background: transparent;
+  transform: none;
+  color: var(--muted);
+}
+
+/* Live-Kicker mit pulsierendem Punkt (Funktion: „läuft jetzt"). */
+.rv-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.rv-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 0 rgba(70, 201, 138, 0.6);
+  animation: live 2s ease-out infinite;
+}
+
+/* Die Bühne: echte Challenge, ein klarer Mittelpunkt (Preisgeld). */
+.rv {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: 460px;
+  width: 100%;
+  margin: 0 auto;
+  animation: pop-in 0.42s var(--spring) both;
+}
+.rv-cat {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  padding: 6px 12px 6px 8px;
+  border-radius: 999px;
+}
+.rv-cat-glyph {
+  font-size: 1rem;
+}
+.rv-title {
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  margin: 16px 0 0;
+}
+/* Held-Zahl: das größte, hellste Element. Geld ist der Star. */
+.rv-prize {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 20px 0 2px;
+}
+.rv-prize-num {
+  font-size: 3.4rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.rv-prize-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.rv-line {
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.55;
+  margin: 14px 0 0;
+  max-width: 40ch;
+}
+
+/* Live-Beleg: echte Menschen + Knappheit. */
+.rv-proof {
+  margin-top: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.rv-crowd {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.rv-avatars {
+  display: inline-flex;
+}
+.rv-av {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid var(--bg);
+  margin-left: -10px;
+  display: inline-grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.82rem;
+  animation: av-in 0.4s var(--spring) both;
+}
+.rv-av:first-child {
+  margin-left: 0;
+}
+.rv-avatars .rv-av:nth-child(2) { animation-delay: 0.05s; }
+.rv-avatars .rv-av:nth-child(3) { animation-delay: 0.1s; }
+.rv-avatars .rv-av:nth-child(4) { animation-delay: 0.15s; }
+.rv-avatars .rv-av:nth-child(5) { animation-delay: 0.2s; }
+@keyframes av-in {
+  from { opacity: 0; transform: scale(0.4); }
+  to { opacity: 1; transform: scale(1); }
+}
+.rv-av-solo {
+  margin: 0;
+  width: 22px;
+  height: 22px;
+  font-size: 0.66rem;
+  border-width: 0;
+}
+.rv-proof-txt {
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+.rv-proof-txt strong {
+  color: var(--text);
+}
+.rv-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+.rv-chip {
+  display: inline-flex;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 5px 11px;
+  font-weight: 600;
+  color: var(--text);
+}
+.rv-by {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.rv-empty {
+  justify-content: center;
+  text-align: left;
+}
+
+/* Reel-Navigations-Punkte */
+.onb-dots {
+  display: flex;
+  gap: 7px;
+  margin: 22px 0 16px;
+}
+.onb-dot-nav {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--line-2);
+  transition: width 0.3s var(--spring), background 0.3s var(--ease);
+}
+.onb-dot-nav.on {
+  width: 22px;
+  border-radius: 4px;
+  background: var(--accent);
+}
+
+.onb-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.onb-primary {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border: none;
+  border-radius: 14px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  padding: 16px;
+  transition: background 0.18s var(--ease), transform 0.25s var(--spring);
+}
+.onb-primary:hover:not(:disabled) {
+  background: var(--accent-2);
+  transform: translateY(-2px);
+}
+.onb-primary:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.onb-back {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-weight: 600;
+  padding: 9px;
+}
+.onb-back:hover:not(:disabled) {
+  background: transparent;
+  transform: none;
+  color: var(--text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

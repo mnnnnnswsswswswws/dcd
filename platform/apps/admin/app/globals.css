@@ -1,0 +1,247 @@
+/* Video-Challenge Admin — ruhiges, komfortables Design (konsistent mit Web/Mobile):
+   weiches neutrales Dunkel, EIN Akzent (Grün = positiv/aktiv/primär), klare Tabellen.
+   Simpel, lesbar, funktional — als Moderations-/Auszahlungskonsole bewusst nüchtern. */
+@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap');
+
+:root {
+  color-scheme: dark;
+  --bg: #16171b;
+  --bg-2: #1b1d22;
+  --surface: #1f2229;
+  --surface-2: #262a32;
+  --line: rgba(255, 255, 255, 0.09);
+  --line-2: rgba(255, 255, 255, 0.15);
+  --text: #edeff3;
+  --muted: #9aa1ac;
+  --faint: #6c727c;
+  --accent: #46c98a;
+  --accent-2: #3bb87c;
+  --accent-ink: #08130d;
+  --danger: #f26d72;
+  /* Semantische Alt-Namen (aus den Komponenten referenziert). */
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-text: var(--text);
+  --color-accent: var(--accent);
+  --color-accent-2: var(--accent);
+  --color-accent-600: var(--accent-2);
+  --color-divider: var(--line);
+  --color-neutral-100: var(--surface-2);
+  --color-neutral-200: var(--surface-2);
+  --color-neutral-800: var(--muted);
+  --color-danger: var(--danger);
+  --font-heading: "Figtree", system-ui, sans-serif;
+  --font-body: "Figtree", system-ui, sans-serif;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 20px 64px;
+}
+main > * {
+  animation: fade 0.3s var(--ease) both;
+}
+@keyframes fade {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+h1 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.5rem;
+  letter-spacing: -0.01em;
+}
+h2 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+  text-underline-offset: 3px;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+::selection {
+  background: rgba(70, 201, 138, 0.32);
+}
+
+/* Datentabellen: schlichtes, lesbares Panel. */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+th {
+  text-align: left;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--faint);
+  font-weight: 600;
+  padding: 12px;
+  border-bottom: 1px solid var(--line);
+}
+td {
+  padding: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+tbody tr {
+  transition: background 0.14s var(--ease);
+}
+tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.settings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  margin-bottom: 20px;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.82rem;
+  color: var(--muted);
+  gap: 5px;
+}
+
+input,
+select {
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 9px 13px;
+  color: var(--text);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  transition: border-color 0.16s var(--ease);
+}
+input:focus-visible,
+select:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+  outline-offset: 0;
+}
+option {
+  color: #111;
+}
+
+button {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.86rem;
+  cursor: pointer;
+  padding: 9px 15px;
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  transition: background 0.16s var(--ease), transform 0.22s var(--spring);
+}
+button:hover:not(:disabled) {
+  background: var(--surface);
+  transform: translateY(-1px);
+}
+button:active:not(:disabled) {
+  transform: scale(0.96);
+}
+button.primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border: none;
+}
+button.primary:hover:not(:disabled) {
+  background: var(--accent-2);
+}
+button:disabled {
+  opacity: 0.42;
+  cursor: default;
+}
+
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 7px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+.badge.danger {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+  border-color: color-mix(in srgb, var(--danger) 34%, transparent);
+}
+
+.between {
+  justify-content: space-between;
+}
+.row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.muted {
+  color: var(--muted);
+}
+.error {
+  color: var(--danger);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

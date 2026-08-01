@@ -1,0 +1,591 @@
+openapi: 3.1.0
+info:
+  title: Video-Challenge-Plattform API
+  version: 0.1.0
+  description: >-
+    Öffentliche und authentifizierte Endpoints der Plattform. Authentifizierung per
+    Bearer-Token (im Mock-Auth-Setup ist der Token die User-ID; `admin:<uuid>` für
+    Admin-Rechte). Beträge in Cent, Zeitstempel in UTC, IDs als UUID.
+    Handgepflegt — bei Endpunkt-Änderungen mit aktualisieren.
+servers:
+  - url: http://localhost:8080
+    description: Lokal
+
+tags:
+  - name: Users
+  - name: Challenges
+  - name: Submissions
+  - name: Feed
+  - name: Safety
+  - name: Webhooks
+  - name: System
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string, example: CHALLENGE_FULL }
+            message: { type: string }
+    ChallengeSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        category: { type: string, nullable: true }
+        status: { $ref: '#/components/schemas/ChallengeStatus' }
+        selectionMode: { type: string, enum: [CREATOR_DECIDES, COMMUNITY_VOTE] }
+        prizeAmountCents: { type: integer }
+        maxSlots: { type: integer, example: 10 }
+        submissionDeadline: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+    ChallengeStatus:
+      type: string
+      enum:
+        [DRAFT, PENDING_FUNDING, OPEN, FULL, SUBMISSIONS_CLOSED, IN_REVIEW,
+         SELECTION, WINNER_LOCKED, PAID_OUT, CANCELLED, EXPIRED]
+    Submission:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        participantId: { type: string, format: uuid }
+        status: { type: string, enum: [DRAFT, SUBMITTED, APPROVED, REJECTED, WINNER, LOSER] }
+        finalizedAt: { type: string, format: date-time, nullable: true }
+        voteCount: { type: integer }
+  responses:
+    Unauthorized:
+      description: Bearer-Token fehlt oder ungültig
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    ErrorResponse:
+      description: Fehler (Code + deutsche Meldung)
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+
+paths:
+  /health:
+    get:
+      tags: [System]
+      summary: Liveness + DB-Erreichbarkeit
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+                  db: { type: string, enum: [up, down] }
+
+  /v1/users:
+    post:
+      tags: [Users]
+      summary: Registrierung (18+-Gate); ID dient als Bearer-Token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { isAdult: { type: boolean } }
+              required: [isAdult]
+      responses:
+        '201':
+          description: Erstellt
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string, format: uuid }
+                  isAdult: { type: boolean }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+
+  /v1/users/me:
+    get:
+      tags: [Users]
+      summary: Eigenes Profil
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Profil }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    patch:
+      tags: [Users]
+      summary: Eigenes Profil aktualisieren (Nutzername/Anzeigename/Bio)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username: { type: string, description: "a–z 0–9 _, 3–20 Zeichen" }
+                displayName: { type: string, maxLength: 40 }
+                bio: { type: string, maxLength: 200 }
+      responses:
+        '200': { description: Aktualisiertes Profil }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+
+  /v1/users/me/challenges:
+    get:
+      tags: [Users]
+      summary: Eigene erstellte + beigetretene Challenges
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Listen
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  created: { type: array, items: { $ref: '#/components/schemas/ChallengeSummary' } }
+                  joined:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: '#/components/schemas/ChallengeSummary'
+                        - type: object
+                          properties: { slotStatus: { type: string } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1/challenges:
+    get:
+      tags: [Challenges]
+      summary: Liste (optional nach Status)
+      parameters:
+        - in: query
+          name: status
+          schema: { $ref: '#/components/schemas/ChallengeStatus' }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 50, maximum: 100 }
+      responses:
+        '200':
+          description: Challenges
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/ChallengeSummary' } }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+    post:
+      tags: [Challenges]
+      summary: Challenge erstellen (PENDING_FUNDING) + Finanzierungs-Absicht
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string, maxLength: 80 }
+                description: { type: string, maxLength: 2000 }
+                category: { type: string, maxLength: 80 }
+                selectionMode: { type: string, enum: [CREATOR_DECIDES, COMMUNITY_VOTE] }
+                prizeAmountCents: { type: integer, minimum: 1 }
+                submissionDeadline: { type: string, format: date-time }
+                criteria:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      title: { type: string }
+                      description: { type: string }
+                      mandatory: { type: boolean, default: true }
+                      evidenceType: { type: string }
+              required: [title, selectionMode, prizeAmountCents, submissionDeadline]
+      responses:
+        '201':
+          description: Erstellt
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  challenge: { $ref: '#/components/schemas/ChallengeSummary' }
+                  funding:
+                    type: object
+                    properties:
+                      providerRef: { type: string }
+                      clientSecret: { type: string }
+                      amountCents: { type: integer }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1/challenges/{id}:
+    get:
+      tags: [Challenges]
+      summary: Öffentlicher Zustand inkl. belegter Plätze + Gewinner
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        '200': { description: Challenge-Detail }
+        '404': { $ref: '#/components/responses/ErrorResponse' }
+
+  /v1/challenges/{id}/submissions:
+    get:
+      tags: [Submissions]
+      summary: Einsendungen + Stimmenzahl (Moderation/Auswahl)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        '200':
+          description: Einsendungen
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Submission' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1/challenges/{id}/join:
+    post:
+      tags: [Challenges]
+      summary: Teilnehmerplatz reservieren
+      security: [{ bearerAuth: [] }]
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        '201': { description: Slot reserviert }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+
+  /v1/challenges/{id}/evidence-intent:
+    post:
+      tags: [Submissions]
+      summary: Upload-Absicht für die In-App-Beweisaufnahme (Flag LONG_CAPTURE_ENABLED)
+      description: >-
+        Nur verfügbar, wenn LONG_CAPTURE_ENABLED gesetzt ist (sonst 404). Legt einen
+        PENDING-Beweis an und liefert den evidenceRef samt Upload-Ziel. Der Ref ist der
+        einzige Weg zu einer gültigen Beweis-Einsendung (kein Galerieimport).
+      security: [{ bearerAuth: [] }]
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { contentType: { type: string, example: video/webm } }
+      responses:
+        '201':
+          description: Upload-Absicht erstellt
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  evidenceRef: { type: string, format: uuid }
+                  uploadUrl: { type: string }
+                  expiresAt: { type: string, format: date-time }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+
+  /v1/challenges/{id}/submit:
+    post:
+      tags: [Submissions]
+      summary: Einsendung abgeben
+      description: >-
+        Bei aktivierter In-App-Aufnahme (LONG_CAPTURE_ENABLED) ist ein gültiger
+        evidenceRef aus /evidence-intent erforderlich; sonst Stub ohne Beweis.
+
+
+        Der Statuscode sagt, ob noch etwas aussteht: Mit Beweisvideo wird 202
+        geantwortet, weil die Einsendung zwar existiert, ihr Video aber noch
+        geprüft wird (es wird nachgesehen, ob der Upload tatsächlich ankam). Der
+        Fortschritt ist unter der Location-URL bzw. operationUrl abrufbar. Ohne
+        Beweisvideo ist mit der Antwort alles erledigt: 201.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { evidenceRef: { type: string, format: uuid } }
+      responses:
+        '201':
+          description: Eingereicht, nichts steht mehr aus (ohne Beweisvideo)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  submissionId: { type: string, format: uuid }
+                  status: { type: string, enum: [SUBMITTED] }
+        '202':
+          description: Eingereicht, Beweisprüfung läuft
+          headers:
+            Location:
+              description: Verfolgungs-URL der Operation
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  submissionId: { type: string, format: uuid }
+                  status: { type: string, enum: [SUBMITTED] }
+                  operationId: { type: string, format: uuid }
+                  operationUrl: { type: string }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+
+  /v1/challenges/{id}/vote:
+    post:
+      tags: [Submissions]
+      summary: Community-Stimme abgeben
+      security: [{ bearerAuth: [] }]
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { submissionId: { type: string, format: uuid } }
+              required: [submissionId]
+      responses:
+        '201': { description: Stimme gezählt }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+
+  /v1/challenges/{id}/close:
+    post:
+      tags: [Challenges]
+      summary: Einsendungsphase schließen (Admin)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        '200': { description: SUBMISSIONS_CLOSED }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+
+  /v1/challenges/{id}/select-winner:
+    post:
+      tags: [Challenges]
+      summary: Gewinner wählen (Ersteller) / Fallback (Admin)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { winnerSubmissionId: { type: string, format: uuid } }
+      responses:
+        '200': { description: Winner-Decision (idempotent) }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+
+  /v1/challenges/{id}/payout:
+    post:
+      tags: [Challenges]
+      summary: Idempotente Auszahlung (Admin; Geldfluss nur bei PAYOUTS_ENABLED)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        '200': { description: PAID oder HELD }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+
+  /v1/challenges/{id}/cancel:
+    post:
+      tags: [Challenges]
+      summary: Abbrechen (+ idempotente Erstattung, falls finanziert)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        '200': { description: CANCELLED }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+
+  /v1/submissions/{id}/moderate:
+    post:
+      tags: [Submissions]
+      summary: Einsendung freigeben/ablehnen (Admin)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { decision: { type: string, enum: [APPROVED, REJECTED] } }
+              required: [decision]
+      responses:
+        '200': { description: Moderiert }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+
+  /v1/feed:
+    get:
+      tags: [Feed]
+      summary: Öffentlicher Feed entschiedener Challenges (PUBLIC_FEED_ENABLED)
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20, maximum: 100 }
+      responses:
+        '200': { description: Feed-Einträge }
+        '404': { description: Feed nicht aktiviert }
+
+  /v1/reports:
+    post:
+      tags: [Safety]
+      summary: Inhalt oder Konto melden (Spec 14.5)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                targetType: { type: string, enum: [CHALLENGE, SUBMISSION, COMMENT, USER] }
+                targetId: { type: string, format: uuid }
+                reason:
+                  type: string
+                  enum: [DANGEROUS, ILLEGAL, VIOLENCE, SEXUAL, MINORS, HARASSMENT, FRAUD, COPYRIGHT, PRIVACY, SPAM, OTHER]
+                description: { type: string, maxLength: 1000 }
+              required: [targetType, targetId, reason]
+      responses:
+        '201': { description: Meldung erstellt (Priorität abgeleitet) }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    get:
+      tags: [Safety]
+      summary: Moderations-/Admin-Queue der Meldungen (Admin)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string, enum: [OPEN, REVIEWING, RESOLVED, DISMISSED] }
+      responses:
+        '200': { description: Meldungen (nach Priorität) }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+
+  /v1/reports/{id}:
+    patch:
+      tags: [Safety]
+      summary: Bearbeitungsstatus einer Meldung setzen (Admin)
+      description: >-
+        Übergänge folgen der Domänenmatrix (OPEN → REVIEWING → RESOLVED/DISMISSED);
+        RESOLVED/DISMISSED sind terminal.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { type: string, enum: [OPEN, REVIEWING, RESOLVED, DISMISSED] }
+              required: [status]
+      responses:
+        '200': { description: Neuer Status }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '404': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+
+  /v1/users/me/notifications:
+    get:
+      tags: [Users]
+      summary: In-App-Mitteilungen des Nutzers (neueste zuerst)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Mitteilungen + Ungelesen-Zähler
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  unreadCount: { type: integer }
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        type: { type: string }
+                        challengeId: { type: string, format: uuid, nullable: true }
+                        title: { type: string }
+                        body: { type: string }
+                        read: { type: boolean }
+                        createdAt: { type: string, format: date-time }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1/users/me/notifications/read:
+    post:
+      tags: [Users]
+      summary: Alle Mitteilungen als gelesen markieren
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Anzahl markierter Mitteilungen
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { marked: { type: integer } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1/profiles/{username}:
+    get:
+      tags: [Users]
+      summary: Öffentliches Profil per Nutzername
+      parameters: [{ in: path, name: username, required: true, schema: { type: string } }]
+      responses:
+        '200':
+          description: Öffentliches Profil samt Kennzahlen
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  username: { type: string }
+                  displayName: { type: string, nullable: true }
+                  bio: { type: string, nullable: true }
+                  joinedAt: { type: string, format: date-time }
+                  createdCount: { type: integer }
+                  participatedCount: { type: integer }
+                  wonCount: { type: integer }
+        '404': { $ref: '#/components/responses/ErrorResponse' }
+
+  /v1/config:
+    get:
+      tags: [System]
+      summary: Öffentliche Laufzeit-Konfiguration (Feature-Flags) für die Frontends
+      responses:
+        '200':
+          description: Unkritische Feature-Flags (keine Secrets)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  longCaptureEnabled: { type: boolean }
+                  publicFeedEnabled: { type: boolean }
+                  payoutsEnabled: { type: boolean }
+
+  /v1/webhooks/payments:
+    post:
+      tags: [Webhooks]
+      summary: Vollfinanzierung bestätigen → veröffentlichen (idempotent)
+      description: >-
+        Verifikation über den konfigurierten Provider — Mock via `x-webhook-secret`,
+        Stripe via Signatur (`stripe-signature`) über den Raw-Body.
+      responses:
+        '200': { description: Empfangen }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { description: Verifikation fehlgeschlagen }

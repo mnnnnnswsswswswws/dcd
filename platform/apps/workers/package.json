@@ -1,0 +1,24 @@
+{
+  "name": "@vcp/workers",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "worker:expire": "tsx src/run-expire-slots.ts",
+    "worker:close": "tsx src/run-close-submissions.ts",
+    "worker:all": "tsx src/run-all.ts",
+    "worker:outbox": "tsx src/run-outbox-publisher.ts",
+    "worker:projection": "tsx src/run-projection-consumer.ts"
+  },
+  "dependencies": {
+    "@google-cloud/pubsub": "^5.3.1",
+    "@prisma/client": "5.22.0",
+    "@vcp/api": "workspace:*",
+    "@vcp/config": "workspace:*",
+    "@vcp/outbox": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "4"
+  }
+}

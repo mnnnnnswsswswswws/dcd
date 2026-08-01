@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.turbo/
+.next/
+coverage/
+.env
+.env.local
+*.log
+*.tsbuildinfo
+
+# Root-.gitignore (iKali) ignoriert "reports/"; unser Quellmodul wieder einschließen.
+!apps/api/src/reports/
+!apps/api/src/reports/**

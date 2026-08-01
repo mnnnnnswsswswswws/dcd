@@ -1,0 +1,7 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+  # Die Expo-Mobile-App verwaltet ihre Abhängigkeiten eigenständig (Expo-Toolchain,
+  # eigener Lockfile) und ist bewusst aus dem pnpm-Workspace ausgenommen, damit der
+  # CI-Install/Build der Web-Pakete unverändert schlank bleibt.
+  - "!apps/mobile"

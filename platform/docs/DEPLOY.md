@@ -1,0 +1,79 @@
+# Deployment
+
+Ein Container-Image (`Dockerfile`) bedient alle Prozesse; der auszuführende Prozess
+wird über das `command` gewählt:
+
+| Prozess           | Command                                          | Betrieb                          |
+| ----------------- | ------------------------------------------------ | -------------------------------- |
+| API-Server        | `pnpm --filter @vcp/api start`                   | langlaufend, hört auf `PORT`     |
+| Migration         | `pnpm exec prisma migrate deploy`                | einmalig vor Rollout             |
+| Slot-Worker       | `pnpm --filter @vcp/api worker:expire -- --once` | periodisch (Scheduler)           |
+| Fristen-Worker    | `pnpm --filter @vcp/api worker:close -- --once`  | periodisch (Scheduler)           |
+
+Die App liest ihre Konfiguration ausschließlich aus Umgebungsvariablen (siehe
+`.env.example` und `packages/config`). Alle Feature-Flags sind default `false`;
+`REAL_MONEY_ENABLED=true` ohne echten Provider lässt den Start hart fehlschlagen.
+
+## Lokal (vollständiger Stack)
+
+```sh
+docker compose -f docker-compose.app.yml up --build
+# API: http://localhost:8080/health
+```
+
+Der `migrate`-Job läuft einmalig vor `api`/Workern und wendet die Migration inkl.
+Ledger-Immutability-Trigger an. Für reinen DB-Betrieb während der Entwicklung genügt
+weiterhin `docker-compose.yml` (`pnpm db:up`) plus lokalem `pnpm start`.
+
+## Frontends (Next.js)
+
+Zwei eigenständige Next.js-Apps, beide mit `NEXT_PUBLIC_API_BASE` auf die öffentliche
+API-URL gebaut (die Variable wird zur **Build-Zeit** eingebettet):
+
+| App           | Zweck                                   | Build & Start                        | Port |
+| ------------- | --------------------------------------- | ------------------------------------ | ---- |
+| `@vcp/web`    | Teilnehmer/Ersteller (mobile-first)     | `pnpm --filter @vcp/web build/start` | 3001 |
+| `@vcp/admin`  | Moderation, Auswahl, Auszahlung         | `pnpm --filter @vcp/admin build/start` | 3000 |
+
+```sh
+NEXT_PUBLIC_API_BASE="https://api.deine-domain.de" pnpm --filter @vcp/web build
+NEXT_PUBLIC_API_BASE="https://api.deine-domain.de" pnpm --filter @vcp/admin build
+```
+
+Die Origins der beiden Frontends müssen in `CORS_ORIGINS` der API stehen. Im Web-Frontend
+kann die API-Basis ohne gesetzte Variable zusätzlich manuell (localStorage) überschrieben
+werden — nur zum Testen. Statische Hosts (Vercel/Cloud Run/Container) sind gleichermaßen
+geeignet; beide Apps sind rein Client-seitig gegen die API und halten keinen Server-State.
+
+## Cloud Run (Skizze)
+
+1. **Image bauen & pushen** (Artifact Registry):
+   ```sh
+   gcloud builds submit --tag REGION-docker.pkg.dev/PROJECT/vcp/api:TAG
+   ```
+2. **Migration** als einmaliger Cloud Run Job (gleiches Image, überschriebenes
+   command `pnpm exec prisma migrate deploy`), ausgeführt vor jedem Rollout. Braucht
+   `DIRECT_URL` (direkte, ungepoolte Verbindung) — die Datasource nutzt `directUrl`
+   für Migrationen.
+3. **API** als Cloud Run Service. Cloud Run setzt `PORT` — `main.ts` liest ihn.
+   Env/Secrets über Secret Manager: `DATABASE_URL` (Laufzeit; bei Neon die gepoolte
+   `-pooler`-URL), `DIRECT_URL` (Migrationen; direkte URL), `WEBHOOK_SECRET`,
+   Feature-Flags. Health-Check: `GET /health`.
+
+**Neon-Hinweis:** `DATABASE_URL` = gepoolte URL (`...-pooler...?sslmode=require&pgbouncer=true`)
+für die Laufzeit, `DIRECT_URL` = direkte/unpooled URL (`?sslmode=require`) für
+`prisma migrate deploy`. Bei ungepoolten Setups (lokal/CI) sind beide identisch.
+4. **Worker** als Cloud Run Jobs, per Cloud Scheduler getriggert (command mit
+   `-- --once`, damit ein Durchlauf läuft und der Job endet):
+   - `worker:expire` — abgelaufene Slot-Reservierungen freigeben,
+   - `worker:close` — Einsendungen abgelaufener Challenges schließen.
+
+## Verifikationsstand
+
+- `prisma migrate deploy` wurde in der Build-Umgebung gegen PostgreSQL 16 ausgeführt;
+  die Migration erzeugt inkl. Immutability-Trigger ein produktionsgleiches Schema, und
+  die vollständige Test-Suite (Integration + e2e) läuft grün gegen die **migrierte** DB.
+- Die Container-Commands (`start`, `worker:expire`, `worker:close`,
+  `prisma migrate deploy`) wurden jeweils direkt verifiziert.
+- Der Docker-**Image-Build** selbst wurde in dieser Umgebung nicht ausgeführt (kein
+  Docker-Daemon verfügbar); das `Dockerfile` folgt Standard-Node/pnpm-Praxis.

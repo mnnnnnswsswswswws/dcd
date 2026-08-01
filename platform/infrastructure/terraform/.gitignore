@@ -1,0 +1,18 @@
+# Providerbinaries und lokaler Arbeitszustand — gehören nicht ins Repository.
+.terraform/
+
+# State enthält Klartext-Attribute (u. a. Verbindungsnamen und ggf. Secret-Referenzen)
+# und darf nie eingecheckt werden. Für gemeinsame Arbeit gehört er in einen
+# GCS-Backend-Bucket, nicht in Git.
+*.tfstate
+*.tfstate.*
+.terraform.tfstate.lock.info
+
+# Lokale Variablenwerte mit projektspezifischen IDs.
+terraform.tfvars
+*.auto.tfvars
+!capacity.auto.tfvars.json
+
+# Ausnahme: .terraform.lock.hcl wird **bewusst** eingecheckt. Ohne die Datei kann
+# jeder Lauf eine andere Providerversion ziehen, und ein `plan` beschreibt dann
+# etwas anderes als das, was geprüft wurde.

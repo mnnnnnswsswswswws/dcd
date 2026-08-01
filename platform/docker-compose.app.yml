@@ -1,0 +1,77 @@
+# Vollständiger containerisierter Stack: PostgreSQL + Migration + API + Worker.
+#
+#   docker compose -f docker-compose.app.yml up --build
+#
+# Danach: API auf http://localhost:8080 (GET /health). Für reinen DB-Betrieb während
+# der lokalen Entwicklung genügt weiterhin `docker-compose.yml` (pnpm db:up).
+name: vcp-platform
+
+x-app-env: &app-env
+  DATABASE_URL: "postgresql://vcp:vcp@postgres:5432/vcp?schema=public"
+  # Lokaler Demo-Stack läuft als development; in Produktion NODE_ENV=production setzen
+  # (dann wird ein echtes, nicht-Default WEBHOOK_SECRET erzwungen).
+  NODE_ENV: "development"
+  WEBHOOK_SECRET: "change-me-in-production"
+  # Erlaubte CORS-Origins (Admin-UI + Web-Frontend). Kommagetrennt oder * für alle.
+  CORS_ORIGINS: "http://localhost:3000,http://localhost:3001"
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: vcp
+      POSTGRES_PASSWORD: vcp
+      POSTGRES_DB: vcp
+    volumes:
+      - vcp_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vcp -d vcp"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Einmaliger Job: wendet die Migration an (inkl. Immutability-Trigger).
+  migrate:
+    build: .
+    image: vcp-platform:local
+    command: ["pnpm", "exec", "prisma", "migrate", "deploy"]
+    environment: *app-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build: .
+    image: vcp-platform:local
+    command: ["pnpm", "--filter", "@vcp/api", "start"]
+    environment:
+      <<: *app-env
+      PORT: "8080"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  worker-expire:
+    image: vcp-platform:local
+    command: ["pnpm", "--filter", "@vcp/workers", "worker:expire"]
+    environment: *app-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  worker-close:
+    image: vcp-platform:local
+    command: ["pnpm", "--filter", "@vcp/workers", "worker:close"]
+    environment: *app-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  vcp_pgdata:
