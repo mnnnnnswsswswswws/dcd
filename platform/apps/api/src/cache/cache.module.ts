@@ -28,6 +28,7 @@ import {
 } from '@vcp/cache';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { ChallengeDetailCache } from '../challenges/challenge-detail-cache.js';
+import { ChallengeListCache } from '../challenges/challenge-list-cache.js';
 
 export const CACHE_STORE = Symbol('CACHE_STORE');
 
@@ -104,7 +105,13 @@ export async function createCacheStore(
       useFactory: (prisma: PrismaService, store: CacheStore) =>
         new ChallengeDetailCache({ prisma, store }),
     },
+    {
+      provide: ChallengeListCache,
+      inject: [PrismaService, CACHE_STORE],
+      useFactory: (prisma: PrismaService, store: CacheStore) =>
+        new ChallengeListCache({ prisma, store }),
+    },
   ],
-  exports: [CACHE_STORE, ChallengeDetailCache],
+  exports: [CACHE_STORE, ChallengeDetailCache, ChallengeListCache],
 })
 export class CacheModule {}

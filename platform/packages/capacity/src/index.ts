@@ -221,3 +221,5 @@ export function assertWithinBudget(
   if (!report.withinBudget) throw new CapacityBudgetError(report);
   return report;
 }
+
+export * from './throughput.js';

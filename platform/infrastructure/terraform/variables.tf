@@ -121,9 +121,24 @@ variable "worker_schedules" {
     # Die Projektion hängt am Publisher — gleiche Taktung, sonst wächst der
     # Rückstand zwischen beiden Stufen.
     "worker-projection" = "* * * * *"
-    # Slot-Ablauf und Fristen sind minutengenau irrelevant; alle fünf Minuten
-    # genügt und spart Läufe.
-    "worker-sweeps" = "*/5 * * * *"
+    # Früher alle fünf Minuten — das war die Decke: Der Lauf erledigt auch die
+    # Beweisprüfung, und 20 Prüfungen je Lauf ergaben 4 Einsendungen pro Minute.
+    # Der Takt ist jetzt Teil des Durchsatzbudgets (packages/capacity), nicht mehr
+    # eine Bequemlichkeitsentscheidung.
+    "worker-sweeps" = "* * * * *"
   }
   description = "Cron-Zeitplan je Worker-Job (Europe/Berlin). Jeder Worker aus var.services braucht einen Eintrag — main.tf erzwingt das."
+}
+
+variable "worker_parallelism" {
+  type = map(number)
+  default = {
+    # Muss zu PROCESSORS in packages/capacity passen; ein Test dort vergleicht.
+    "worker-outbox"     = 2
+    "worker-projection" = 2
+    # Die Sweeps sind idempotent, aber ihre Arbeit ist nicht partitioniert —
+    # zwei Läufer würden sich hier nur gegenseitig die Sperren wegnehmen.
+    "worker-sweeps" = 1
+  }
+  description = "Gleichzeitige Tasks je Worker-Job. Nicht frei wählbar: Das Verbindungsbudget rechnet mit max_instances x db_pool_size, und die Parallelität ist der Teil davon, der tatsaechlich laeuft."
 }

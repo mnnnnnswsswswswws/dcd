@@ -27,6 +27,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { AuthGuard, type AuthenticatedUser } from '../auth/auth.guard.js';
 import { CurrentUser, CurrentUserId } from '../auth/current-user.decorator.js';
 import { ChallengeDetailCache } from './challenge-detail-cache.js';
+import { ChallengeListCache } from './challenge-list-cache.js';
 import { joinChallenge, type JoinChallengeResult } from './join-challenge.js';
 import {
   createChallenge,
@@ -39,7 +40,7 @@ import { cancelChallenge } from './cancel-challenge.js';
 import { submitEntry } from '../submissions/submit-entry.js';
 import { castVote } from '../submissions/cast-vote.js';
 import { processPayout } from '../funding/process-payout.js';
-import { addComment, countsFor, listComments, toggleBookmark, toggleLike } from '../social/social.js';
+import { addComment, listComments, toggleBookmark, toggleLike } from '../social/social.js';
 
 @Controller('v1/challenges')
 export class ChallengesController {
@@ -54,6 +55,7 @@ export class ChallengesController {
     @Inject(PAYMENT_PROVIDER) private readonly payments: PaymentProvider,
     @Inject(EVIDENCE_STORAGE) private readonly storage: EvidenceStorageProvider,
     @Inject(ChallengeDetailCache) private readonly detailCache: ChallengeDetailCache,
+    @Inject(ChallengeListCache) private readonly listCache: ChallengeListCache,
   ) {}
 
   private get deps() {
@@ -81,36 +83,19 @@ export class ChallengesController {
       throw apiError('INVALID_INPUT');
     }
     const take = Math.min(Math.max(Number(limit) || 50, 1), 100);
-    const rows = await this.prisma.challenge.findMany({
-      where: status !== undefined ? { status: status as (typeof ChallengeStatus)[keyof typeof ChallengeStatus] } : {},
-      orderBy: { createdAt: 'desc' },
-      take,
-      select: {
-        id: true,
-        title: true,
-        category: true,
-        status: true,
-        selectionMode: true,
-        prizeAmountCents: true,
-        maxSlots: true,
-        submissionDeadline: true,
-        createdAt: true,
-        creator: { select: { username: true, displayName: true } },
-      },
-    });
-    // Belegte Plätze je Challenge in einem Rutsch (für "N frei" im Feed).
-    const counts = await this.prisma.slot.groupBy({
-      by: ['challengeId'],
-      where: { challengeId: { in: rows.map((r) => r.id) }, status: { in: ['RESERVED', 'CAPTURING', 'UPLOADING', 'SUBMITTED'] } },
-      _count: { _all: true },
-    });
-    const occupied = new Map(counts.map((c) => [c.challengeId, c._count._all]));
-    const social = await countsFor({ prisma: this.prisma }, rows.map((r) => r.id));
-    return rows.map((r) => ({
-      ...r,
-      occupiedSlots: occupied.get(r.id) ?? 0,
-      likeCount: social.get(r.id)?.likeCount ?? 0,
-      commentCount: social.get(r.id)?.commentCount ?? 0,
+
+    // Über den Cache statt direkt an die Datenbank. Diese Route ist der heißeste
+    // Lesepfad — ein Feed ruft sie bei jedem Scroll auf. Vorher lief hier bei
+    // jedem Request ein Aggregat über `slots` plus zwei über Likes und
+    // Kommentare, obwohl Projektion und Cache bereits existierten und nur an der
+    // Detail-Route hingen. Ein Cache neben dem heißen Pfad entlastet nichts.
+    const items = await this.listCache.list({ status, limit: take });
+
+    // `occupiedSlots` bleibt im Vertrag, ist aber ausdrücklich ein Anzeigewert:
+    // Über einen Platz entscheidet allein `joinChallenge` unter FOR UPDATE.
+    return items.map(({ occupiedSlotsForDisplay, ...rest }) => ({
+      ...rest,
+      occupiedSlots: occupiedSlotsForDisplay,
     }));
   }
 

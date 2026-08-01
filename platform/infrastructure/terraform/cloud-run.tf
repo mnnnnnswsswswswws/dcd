@@ -175,10 +175,15 @@ resource "google_cloud_run_v2_job" "worker" {
   ]
 
   template {
-    # Ein Task je Lauf; die Parallelität kommt aus mehreren gleichzeitigen
-    # Ausführungen. `FOR UPDATE SKIP LOCKED` in packages/outbox macht das sicher.
-    task_count  = 1
-    parallelism = 1
+    # Parallelität je Lauf aus dem Durchsatzbudget (packages/capacity), nicht fest
+    # auf 1. Die Kapazitätstabelle budgetierte vier Publisher, Terraform startete
+    # einen — "budgetiert" und "läuft" waren zwei verschiedene Dinge, und nur eines
+    # davon stand irgendwo geschrieben.
+    #
+    # `FOR UPDATE SKIP LOCKED` in packages/outbox macht die Parallelität sicher:
+    # Zwei Läufer greifen nie denselben Eintrag.
+    task_count  = lookup(var.worker_parallelism, each.key, 1)
+    parallelism = lookup(var.worker_parallelism, each.key, 1)
 
     template {
       service_account = google_service_account.service[each.key].email

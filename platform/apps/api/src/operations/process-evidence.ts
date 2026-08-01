@@ -17,11 +17,31 @@
  */
 
 import type { PrismaClient } from '@prisma/client';
+import { DEFAULT_TARGET_LOAD, deriveBatchSize } from '@vcp/capacity';
 import type { EvidenceStorageProvider } from '../storage/storage-provider.js';
 import { OperationKind, markFailed, markSucceeded } from './async-operations.js';
 
 /** Sichtbarkeitsfenster: So lange gilt eine beanspruchte Operation als in Arbeit. */
 export const CLAIM_VISIBILITY_MS = 5 * 60 * 1000;
+
+/** Scheduler-Takt von worker-sweeps. Muss zu var.worker_schedules passen. */
+const EVIDENCE_INTERVAL_SECONDS = 60;
+
+/**
+ * Einträge je Lauf — **abgeleitet**, nicht gewählt.
+ *
+ * Vorher stand hier 20, bei einem Takt von fünf Minuten: 4 Einsendungen pro Minute.
+ * Ab der fünften wuchs der Rückstand unbegrenzt, und jeder Nutzer sah unbefristet
+ * `PENDING`. Die Zahl war nirgends gegen eine Zielrate geprüft, weil nirgends eine
+ * Zielrate stand.
+ *
+ * Jetzt kommt sie aus `@vcp/capacity`, und ein Test dort schlägt fehl, sobald sie
+ * die Zielrate nicht mehr trägt.
+ */
+export const EVIDENCE_BATCH_SIZE = deriveBatchSize(
+  DEFAULT_TARGET_LOAD.submissionsPerMinute * DEFAULT_TARGET_LOAD.headroomFactor,
+  EVIDENCE_INTERVAL_SECONDS,
+);
 
 export const EvidenceError = {
   /** Kein Objekt unter dem Schlüssel — es wurde nie hochgeladen. */
@@ -52,7 +72,7 @@ interface ClaimedRow {
 export async function processEvidenceOperations(
   prisma: PrismaClient,
   storage: EvidenceStorageProvider,
-  batchSize = 20,
+  batchSize = EVIDENCE_BATCH_SIZE,
   now: Date = new Date(),
 ): Promise<ProcessEvidenceStats> {
   const sichtbarAb = new Date(now.getTime() - CLAIM_VISIBILITY_MS);

@@ -80,7 +80,10 @@ jobs:
       # Verbindungsbudget-Gate (Scale S1, Aufgabe 13): schlaegt fehl, bevor eine
       # erhoehte max_instances die Datenbank aussperren koennte. Laeuft frueh und
       # separat, damit die Ursache im CI-Log sofort sichtbar ist.
-      - name: Kapazitaets- und Verbindungsbudget
+      # Kapazitaets-, Verbindungs- UND Durchsatzbudget. Der Durchsatzteil ist neu:
+      # Batchgroessen und Scheduler-Takte standen vorher als Literale im Code, ohne
+      # dass irgendwo eine Zielrate stand, gegen die man sie haette pruefen koennen.
+      - name: Kapazitaets-, Verbindungs- und Durchsatzbudget
         run: pnpm --filter @vcp/capacity test
 
       # Terraform-Syntax und Provider-Schema pruefen. Braucht keine Cloud-Credentials

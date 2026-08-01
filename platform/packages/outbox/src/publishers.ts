@@ -55,19 +55,69 @@ export function toBrokerMessage(event: OutboxEventRecord): {
 }
 
 /**
- * Publisher gegen einen echten Broker. Bewusst sequenziell je Nachricht: Bei einem
- * Fehler mittendrin schlägt der ganze Batch fehl und wird erneut zugestellt — das ist
- * korrekt, weil die Consumer idempotent sind, und einfacher als partielle Buchführung.
+ * Publisher gegen einen echten Broker.
+ *
+ * Zustellung **parallel über Ordering Keys hinweg, sequenziell innerhalb eines
+ * Keys**. Beides ist notwendig, und die Kombination ist der ganze Punkt:
+ *
+ *   • Sequenziell innerhalb eines Keys, weil die Reihenfolge je Aggregat die
+ *     Garantie ist, für die der Key überhaupt existiert. Zwei Ereignisse derselben
+ *     Challenge gleichzeitig loszuschicken gibt sie preis.
+ *   • Parallel über Keys hinweg, weil unterschiedliche Aggregate nichts miteinander
+ *     zu tun haben. Vorher lief hier ein einzelnes `await` je Ereignis über den
+ *     gesamten Stapel — bei einer Netzwerk-Umlaufzeit von 20 ms sind das 50
+ *     Ereignisse pro Sekunde, unabhängig davon, wie viel Arbeit anliegt. Das war
+ *     keine bewusste Auslegung, sondern eine Schleife.
+ *
+ * Bei einem Fehler schlägt der ganze Batch fehl und wird erneut zugestellt. Das
+ * bleibt korrekt, weil die Consumer idempotent sind, und ist einfacher als eine
+ * partielle Buchführung.
  */
-export function createBrokerPublisher(topic: TopicClient): EventPublisher {
+export function createBrokerPublisher(
+  topic: TopicClient,
+  maxConcurrentKeys = DEFAULT_MAX_CONCURRENT_KEYS,
+): EventPublisher {
   return {
     async publish(events: readonly OutboxEventRecord[]): Promise<void> {
+      // Nach Ordering Key gruppieren; die Reihenfolge innerhalb einer Gruppe bleibt
+      // die Reihenfolge der Sequenz, weil der Store bereits sortiert liefert.
+      const gruppen = new Map<string, OutboxEventRecord[]>();
       for (const event of events) {
-        await topic.publishMessage(toBrokerMessage(event));
+        const key = `${event.aggregateType}:${event.aggregateId}`;
+        const gruppe = gruppen.get(key);
+        if (gruppe === undefined) gruppen.set(key, [event]);
+        else gruppe.push(event);
       }
+
+      // Begrenzte Nebenläufigkeit: Ohne Obergrenze würde ein großer Rückstand
+      // tausende gleichzeitige Zustellungen öffnen und den Broker-Client sowie das
+      // Verbindungsbudget überrennen — der Rückstand würde die Störung verschärfen,
+      // die ihn verursacht hat.
+      const warteschlange = [...gruppen.values()];
+      const laeufer = Array.from(
+        { length: Math.min(maxConcurrentKeys, warteschlange.length) },
+        async () => {
+          for (;;) {
+            const gruppe = warteschlange.shift();
+            if (gruppe === undefined) return;
+            for (const event of gruppe) {
+              await topic.publishMessage(toBrokerMessage(event));
+            }
+          }
+        },
+      );
+      await Promise.all(laeufer);
     },
   };
 }
+
+/**
+ * Gleichzeitig bediente Ordering Keys.
+ *
+ * 16 statt „so viele wie möglich": Die Zahl muss zum Verbindungs- und
+ * Speicherbudget des Workers passen, nicht zur Größe des Rückstands.
+ */
+export const DEFAULT_MAX_CONCURRENT_KEYS = 16;
 
 /** Entwicklungs-Adapter ohne Cloud: schreibt die Nachrichten ins Log. */
 export class LoggingBrokerPublisher implements EventPublisher {

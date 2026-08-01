@@ -92,6 +92,9 @@ importers:
       '@vcp/cache':
         specifier: workspace:*
         version: link:../../packages/cache
+      '@vcp/capacity':
+        specifier: workspace:^
+        version: link:../../packages/capacity
       '@vcp/config':
         specifier: workspace:*
         version: link:../../packages/config

@@ -19,6 +19,7 @@
     "@nestjs/throttler": "6",
     "@prisma/client": "5.22.0",
     "@vcp/cache": "workspace:*",
+    "@vcp/capacity": "workspace:^",
     "@vcp/config": "workspace:*",
     "@vcp/contracts": "workspace:*",
     "@vcp/domain": "workspace:*",

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { OutboxPublisher, backoffDelayMs, outboxLagMs } from './publisher.js';
+import { createBrokerPublisher } from './publishers.js';
 import {
   HandlerOutcome,
   IdempotentHandler,
@@ -429,5 +430,90 @@ describe('Unique-Violation-Erkennung', () => {
   it('lässt echte Fehler durch', () => {
     expect(isUniqueViolation(new Error('connection reset'))).toBe(false);
     expect(isUniqueViolation(null)).toBe(false);
+  });
+});
+
+describe('Zustellung: parallel über Aggregate, sequenziell je Aggregat', () => {
+  /** Topic-Double, das Reihenfolge und Gleichzeitigkeit mitschreibt. */
+  function beobachtetesTopic(verzoegerungMs = 5) {
+    const zugestellt: string[] = [];
+    let gleichzeitig = 0;
+    let maxGleichzeitig = 0;
+    return {
+      zugestellt,
+      get maxGleichzeitig() {
+        return maxGleichzeitig;
+      },
+      topic: {
+        async publishMessage(msg: { attributes?: Record<string, string>; orderingKey?: string }) {
+          gleichzeitig += 1;
+          maxGleichzeitig = Math.max(maxGleichzeitig, gleichzeitig);
+          await new Promise((r) => setTimeout(r, verzoegerungMs));
+          zugestellt.push(`${msg.orderingKey}#${msg.attributes?.sequence}`);
+          gleichzeitig -= 1;
+          return 'id';
+        },
+      },
+    };
+  }
+
+  const ev = (seq: bigint, aggregateId: string): OutboxEventRecord =>
+    ({
+      sequence: seq,
+      eventId: `e-${seq}`,
+      eventType: 'challenge.slot_reserved',
+      aggregateType: 'challenge',
+      aggregateId,
+      payload: {},
+      status: 'PENDING',
+      attempts: 0,
+      availableAt: new Date(0),
+      createdAt: new Date(0),
+      publishedAt: null,
+      lastError: null,
+    }) as unknown as OutboxEventRecord;
+
+  it('hält die Reihenfolge innerhalb eines Aggregats streng ein', async () => {
+    const b = beobachtetesTopic();
+    await createBrokerPublisher(b.topic).publish([
+      ev(1n, 'a'), ev(2n, 'a'), ev(3n, 'a'), ev(4n, 'a'),
+    ]);
+    expect(b.zugestellt).toEqual([
+      'challenge:a#1', 'challenge:a#2', 'challenge:a#3', 'challenge:a#4',
+    ]);
+    // Ein Aggregat wird nie gleichzeitig bedient — sonst wäre die Garantie weg.
+    expect(b.maxGleichzeitig).toBe(1);
+  });
+
+  it('stellt unterschiedliche Aggregate gleichzeitig zu', async () => {
+    const b = beobachtetesTopic();
+    await createBrokerPublisher(b.topic).publish([
+      ev(1n, 'a'), ev(2n, 'b'), ev(3n, 'c'), ev(4n, 'd'),
+    ]);
+    expect(b.zugestellt).toHaveLength(4);
+    // Der eigentliche Fund: Vorher lief das strikt nacheinander — eine
+    // Zustellrate, die nicht von der Last abhing, sondern von der Umlaufzeit.
+    expect(b.maxGleichzeitig).toBeGreaterThan(1);
+  });
+
+  it('überschreitet die Obergrenze der Gleichzeitigkeit nicht', async () => {
+    // Ohne Grenze würde ein großer Rückstand tausende Zustellungen gleichzeitig
+    // öffnen und die Störung verschärfen, die ihn verursacht hat.
+    const b = beobachtetesTopic();
+    const viele = Array.from({ length: 100 }, (_, i) => ev(BigInt(i + 1), `agg-${i}`));
+    await createBrokerPublisher(b.topic, 4).publish(viele);
+    expect(b.zugestellt).toHaveLength(100);
+    expect(b.maxGleichzeitig).toBeLessThanOrEqual(4);
+  });
+
+  it('vermischt die Reihenfolge zweier Aggregate nicht', async () => {
+    const b = beobachtetesTopic();
+    await createBrokerPublisher(b.topic, 2).publish([
+      ev(1n, 'a'), ev(2n, 'b'), ev(3n, 'a'), ev(4n, 'b'),
+    ]);
+    const nurA = b.zugestellt.filter((s) => s.startsWith('challenge:a'));
+    const nurB = b.zugestellt.filter((s) => s.startsWith('challenge:b'));
+    expect(nurA).toEqual(['challenge:a#1', 'challenge:a#3']);
+    expect(nurB).toEqual(['challenge:b#2', 'challenge:b#4']);
   });
 });

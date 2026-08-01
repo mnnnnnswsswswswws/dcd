@@ -91,6 +91,8 @@ export {
   rebuildChallengeProjection,
 } from './projections/challenge-projection.js';
 export { ChallengeDetailCache } from './challenges/challenge-detail-cache.js';
+export { ChallengeListCache, CHALLENGE_LIST_NAMESPACE } from './challenges/challenge-list-cache.js';
+export type { PublicChallengeListItem } from './challenges/challenge-list-cache.js';
 export type { PublicChallengeView } from './challenges/challenge-detail-cache.js';
 export { writeOutboxEvent, writeOutboxEvents, Aggregate } from './events/outbox.js';
 export {
